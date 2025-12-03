@@ -1,5 +1,6 @@
 package com.ecowattnuevo
 
+import android.os.Bundle // <--- 1. IMPORTACIÓN NUEVA OBLIGATORIA
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -19,4 +20,9 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  // 🔥 2. ESTE BLOQUE ES EL QUE ARREGLA LA PANTALLA BLANCA 🔥
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(null)
+  }
 }

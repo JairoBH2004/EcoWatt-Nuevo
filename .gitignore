@@ -73,3 +73,11 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Environmental variables (Claves secretas)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
