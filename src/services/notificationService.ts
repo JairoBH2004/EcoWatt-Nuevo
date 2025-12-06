@@ -1,6 +1,9 @@
+// notificationService.ts
+
 import messaging from '@react-native-firebase/messaging';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import { useNotificationStore } from '../store/useNotificationStore'; // 🔥 NUEVA IMPORTACIÓN
 
 const API_URL = 'https://core-cloud.dev/api/v1';
 
@@ -8,7 +11,6 @@ const API_URL = 'https://core-cloud.dev/api/v1';
  * 1. Solicitar permisos (Android 13+ e iOS)
  */
 export async function requestNotificationPermission() {
-    // [Lógica interna sin cambios, está correcta]
     try {
         if (Platform.OS === 'android' && Platform.Version >= 33) {
             const granted = await PermissionsAndroid.request(
@@ -42,7 +44,6 @@ export async function requestNotificationPermission() {
  * 2. Obtener el Token FCM
  */
 export async function getFCMToken() {
-    // [Lógica interna sin cambios, está correcta]
     try {
         if (Platform.OS === 'ios') {
             await messaging().registerDeviceForRemoteMessages();
@@ -61,7 +62,6 @@ export async function getFCMToken() {
  * 3. Registrar token en el backend
  */
 export async function registerFCMToken(accessToken: string) {
-    // [Lógica interna sin cambios, está correcta]
     try {
         const fcmToken = await getFCMToken();
         if (!fcmToken) {
@@ -100,28 +100,41 @@ export async function registerFCMToken(accessToken: string) {
 }
 
 /**
- * 4. Escuchar notificaciones (sin cambios, está bien)
+ * 4. Escuchar notificaciones (MODIFICADO para usar el store)
  */
 export function setupNotificationListeners() {
-    // [Lógica interna sin cambios, está correcta]
+    const addNotification = useNotificationStore.getState().addNotification; // 🔥 USAR EL STORE
+    
+    const handleNotification = (remoteMessage: any) => {
+        if (remoteMessage && (remoteMessage.notification?.title || remoteMessage.notification?.body)) {
+            // Solo guardamos si hay contenido de notificación
+            addNotification({
+                title: remoteMessage.notification?.title || 'Notificación EcoWatt',
+                body: remoteMessage.notification?.body || 'Revisa tus alertas.',
+            });
+            console.log('🔔 [FCM] Notificación guardada en el store:', remoteMessage.notification?.title);
+        }
+    };
+    
+    // Al recibir un mensaje en foreground
     const unsubscribe = messaging().onMessage(async remoteMessage => {
         console.log('🔔 [FCM] Notificación recibida (foreground):', remoteMessage);
-
-        Alert.alert(
-            remoteMessage.notification?.title || 'Nueva Alerta EcoWatt',
-            remoteMessage.notification?.body || 'Revisa tu consumo.'
-        );
+        handleNotification(remoteMessage);
     });
 
+    // Manejo de app abierta desde background
     messaging().onNotificationOpenedApp(remoteMessage => {
         console.log('🔔 [FCM] App abierta desde background:', remoteMessage);
+        handleNotification(remoteMessage);
     });
 
+    // Manejo de app iniciada por notificación (quit state)
     messaging()
         .getInitialNotification()
         .then(remoteMessage => {
             if (remoteMessage) {
                 console.log('🔔 [FCM] App iniciada por notificación:', remoteMessage);
+                handleNotification(remoteMessage);
             }
         });
 
@@ -129,25 +142,16 @@ export function setupNotificationListeners() {
 }
 
 /**
- * 5. ✅ FINAL - Función de inicialización completa (Nombre unificado)
+ * 5. ✅ FINAL - Función de inicialización completa
  */
 export async function initializeNotificationService(accessToken: string) {
     try {
-        // 1. Pedir permisos
         const hasPermission = await requestNotificationPermission();
-        if (!hasPermission) {
-            console.warn('⚠️ Usuario denegó permisos de notificación');
-            return false;
-        }
+        if (!hasPermission) return false;
 
-        // 2. Registrar token
         const registered = await registerFCMToken(accessToken);
-        if (!registered) {
-            console.warn('⚠️ No se pudo registrar el token FCM');
-            return false;
-        }
+        if (!registered) return false;
 
-        // 3. Setup listeners
         setupNotificationListeners();
 
         console.log('✅ [FCM] Sistema de notificaciones inicializado completamente');

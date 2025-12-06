@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 const API_BASE_URL = 'https://core-cloud.dev';
 
-// --- Tipos de la Respuesta de Reporte (Se mantienen) ---
+// --- Tipos de la Respuesta de Reporte ---
 export type DailyConsumptionPoint = { date: string; kwh: number; };
 export type TariffLevel = { level_name: string; kwh_consumed: number; price_per_kwh: number; subtotal_mxn: number; }; 
 
@@ -18,8 +18,7 @@ export interface MonthlyReportData {
 
 /**
  * Endpoint: POST /api/v1/reports/monthly
- * Genera un reporte mensual para el mes y año especificados, 
- * manejando caché o generación en tiempo real según el backend.
+ * Genera un reporte para meses PASADOS (Histórico / Base de Datos)
  */
 export const getMonthlyReport = async (
     token: string, 
@@ -27,25 +26,22 @@ export const getMonthlyReport = async (
     year: number
 ): Promise<MonthlyReportData> => {
     try {
-        console.log(`Solicitando reporte para mes ${month} y año ${year}`);
+        console.log(`Solicitando reporte histórico para mes ${month} y año ${year}`);
         const response = await fetch(`${API_BASE_URL}/api/v1/reports/monthly`, {
-            method: 'POST', // <-- MÉTODO POST
+            method: 'POST',
             headers: { 
                 'Content-Type': 'application/json', 
                 'Authorization': `Bearer ${token}` 
             },
-            body: JSON.stringify({ month, year }), // <-- CUERPO CON MES Y AÑO
+            body: JSON.stringify({ month, year }),
         });
 
         if (!response.ok) {
-            console.error("Error al obtener reporte:", response.status);
+            console.error("Error al obtener reporte histórico:", response.status);
             throw new Error(`Error ${response.status}: No se pudo obtener el reporte.`);
         }
         
         const data = await response.json();
-        // Log para depuración, verifica que los datos no sean cero aquí
-        console.log("Reporte recibido:", JSON.stringify(data.executive_summary, null, 2)); 
-
         return data as MonthlyReportData;
     } catch (error) {
         console.error('Error de red al obtener reporte:', error);
@@ -53,10 +49,31 @@ export const getMonthlyReport = async (
     }
 };
 
-// Dejamos la función original comentada si la necesitas en otro lugar, 
-// pero usaremos la nueva `getMonthlyReport` en StatsScreen.
-/*
+/**
+ * Endpoint: GET /api/v1/reports/monthly/current
+ * Genera el reporte del mes ACTUAL (Tiempo Real / Redis)
+ */
 export const getCurrentMonthlyReport = async (token: string): Promise<MonthlyReportData> => {
-    // Implementación original GET /api/v1/reports/monthly/current
+    try {
+        console.log("Solicitando reporte del mes ACTUAL (Tiempo real)...");
+        const response = await fetch(`${API_BASE_URL}/api/v1/reports/monthly/current`, {
+            method: 'GET',
+            headers: { 
+                'Authorization': `Bearer ${token}` 
+            }
+        });
+
+        if (!response.ok) {
+            console.error("Error al obtener reporte actual:", response.status);
+            throw new Error(`Error ${response.status}: No se pudo obtener el reporte actual.`);
+        }
+        
+        const data = await response.json();
+        console.log("Reporte actual recibido:", JSON.stringify(data.executive_summary, null, 2));
+        
+        return data as MonthlyReportData;
+    } catch (error) {
+        console.error('Error de red al obtener reporte actual:', error);
+        throw new Error('Error de red al obtener el reporte actual.');
+    }
 };
-*/

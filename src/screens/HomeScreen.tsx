@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, ScrollView, StatusBar, TouchableOpacity,
     ImageBackground, Alert, ActivityIndicator, Button,
-    Dimensions
+    Dimensions, StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome5';
@@ -10,14 +10,13 @@ import { BarChart } from 'react-native-chart-kit';
 
 import { styles } from '../styles/HomeStyles';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 import {
     getDashboardSummary, DashboardSummary,
     getUserProfile, UserProfile,
     getDevices, Device,
     getLast7DaysHistory
 } from '../services/authService';
-
-// Eliminamos la importación de setupNotificationListeners
 
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -53,8 +52,14 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
     const [graphData, setGraphData] = useState<GraphData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    
+    // 🔥 Estado para alternar la vista de CO2 a Árboles
+    const [showTrees, setShowTrees] = useState(false);
 
-    // 1. EFECTO PARA CARGAR DATOS (PERFIL, DISPOSITIVOS, GRÁFICA) - Lógica intacta
+    // Obtener el contador de notificaciones no leídas
+    const unreadCount = useNotificationStore(state => state.unreadCount);
+
+    // 1. EFECTO PARA CARGAR DATOS
     useEffect(() => {
         const loadInitialData = async () => {
             if (!token) {
@@ -91,9 +96,8 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
                     ]);
                     setSummary(summaryData);
 
-                    // Lógica de Gráfica (Ordenamiento y Mapeo) - Lógica intacta
+                    // Lógica de Gráfica
                     if (historyData && historyData.labels && historyData.watts && historyData.labels.length > 0) {
-                        
                         const combinedData = historyData.labels.map((label: string, index: number) => ({
                             timestamp: label,
                             value: historyData.watts[index] || 0 
@@ -139,10 +143,6 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
     }, [token, logout, setHasDevices]);
 
 
-    // 🔥 BLOQUE ELIMINADO: Ya no necesitamos el useEffect de notificaciones aquí.
-    // Lo movimos a LoginScreen.tsx, y la app ya no crashea al iniciar.
-
-
     // --- RENDERIZADO ---
     if (isLoading) {
         return (
@@ -177,7 +177,7 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
                      <Icon name="plus-circle" size={50} color={PRIMARY_GREEN} />
                      <Text style={styles.actionTitle}>¡Bienvenido a EcoWatt!</Text>
                      <Text style={styles.actionSubtitle}>
-                         No tienes ningún dispositivo, agrega uno para comenzar.
+                          No tienes ningún dispositivo, agrega uno para comenzar.
                      </Text>
                      <TouchableOpacity
                          style={[styles.addButton, { marginVertical: 20 }]}
@@ -200,8 +200,16 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
                         <Text style={styles.headerSubtitle}>Tu resumen de energía</Text>
                     </View>
                     <View style={styles.headerIconsContainer}>
-                        <TouchableOpacity style={styles.menuButton} onPress={() => Alert.alert('Notificaciones', 'No tienes notificaciones nuevas.')}>
+                        <TouchableOpacity 
+                            style={styles.menuButton} 
+                            onPress={() => navigation.navigate('Notifications')}
+                        >
                             <Icon name="bell" size={24} color="#FFFFFF" solid />
+                            {unreadCount > 0 && (
+                                <View style={customStyles.notificationBadge}>
+                                    <Text style={customStyles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                                </View>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -218,11 +226,32 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
                         <Text style={styles.smallCardValue}>{summary?.kwh_consumed_cycle?.toFixed(2) || 0} kWh</Text>
                         <Text style={styles.smallCardLabel}>Consumo del Ciclo</Text>
                     </View>
-                    <View style={styles.smallCard}>
-                        <Icon name="leaf" size={24} color={PRIMARY_GREEN} />
-                        <Text style={styles.smallCardValue}>{summary?.carbon_footprint?.co2_emitted_kg?.toFixed(1) || 0} kg</Text>
-                        <Text style={styles.smallCardLabel}>CO₂ Emitido</Text>
-                    </View>
+                    
+                    {/* 🔥 CARD DE CO₂ INTERACTIVO CON TOGGLE */}
+                    <TouchableOpacity 
+                        style={styles.smallCard}
+                        onPress={() => setShowTrees(!showTrees)} // Alterna entre true/false
+                        activeOpacity={0.7} // Efecto visual al tocar
+                    >
+                        {/* Cambia el icono: 'leaf' para CO2, 'tree' para árboles */}
+                        <Icon name={showTrees ? "tree" : "leaf"} size={24} color={PRIMARY_GREEN} />
+                        
+                        {/* Cambia el valor numérico */}
+                        <Text style={styles.smallCardValue}>
+                            {showTrees 
+                                ? (summary?.carbon_footprint?.equivalent_trees_absorption_per_year?.toFixed(1) || 0) 
+                                : (summary?.carbon_footprint?.co2_emitted_kg?.toFixed(1) || 0)
+                            } 
+                            {/* Cambia la unidad: nada para árboles, 'kg' para CO2 */}
+                            {showTrees ? '' : ' kg'}
+                        </Text>
+                        
+                        {/* Cambia la etiqueta inferior */}
+                        <Text style={styles.smallCardLabel}>
+                            {showTrees ? "Árboles Eq." : "CO₂ Emitido"}
+                        </Text>
+                    </TouchableOpacity>
+                    {/* 👆 FIN DEL CAMBIO */}
                 </View>
 
                 <View style={styles.recommendationCard}>
@@ -270,6 +299,26 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
         </ImageBackground>
     );
 };
+
+const customStyles = StyleSheet.create({
+    notificationBadge: {
+        position: 'absolute',
+        right: -8,
+        top: -8,
+        backgroundColor: '#E74C3C',
+        borderRadius: 9,
+        minWidth: 18,
+        height: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
+    },
+    notificationBadgeText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+});
 
 const chartConfig = {
     backgroundColor: '#1E2A47',

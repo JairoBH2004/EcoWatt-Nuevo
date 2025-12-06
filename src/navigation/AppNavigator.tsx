@@ -10,13 +10,14 @@ import { useAuthStore } from '../store/useAuthStore';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
-// --- 👇 Importar la nueva pantalla 👇 ---
+// --- 👇 Importar la nueva pantalla de Notificaciones y las demás 👇 ---
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import StatsScreen from '../screens/StatsScreen';
 import AddDeviceScreen from '../screens/AddDeviceScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen'; // 🔥 IMPORTACIÓN NECESARIA
 import { UserProfile } from '../services/authService';
 
 // --- Tipos ---
@@ -24,11 +25,12 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
-  // --- 👇 Añadir tipo para la nueva pantalla 👇 ---
   ResetPassword: undefined;
   MainApp: undefined;
   AddDevice: undefined;
   EditProfile: { currentUser: UserProfile };
+  // 🔥 CAMBIO CLAVE 1: Declarar la ruta 'Notifications'
+  Notifications: undefined; 
 };
 
 export type RootTabParamList = {
@@ -42,7 +44,6 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 
 // --- Tabs (barra inferior) ---
 function MainAppTabs() {
-  // --- 👇 CAMBIO 2: Leer el estado global ---
   const { hasDevices } = useAuthStore();
 
     return (
@@ -108,27 +109,22 @@ function MainAppTabs() {
         >
             <Tab.Screen name="Home" component={HomeScreen} />
             
-            {/* --- 👇 CAMBIO 3: Añadir 'listeners' a la pantalla "Stats" --- */}
             <Tab.Screen 
               name="Stats" 
               component={StatsScreen} 
               listeners={{
                 tabPress: e => {
-                  // Si NO tiene dispositivos, previene la navegación
                   if (!hasDevices) {
-                    e.preventDefault(); // <-- Bloquea el clic
+                    e.preventDefault(); 
                     
-                    // Muestra una alerta al usuario
                     Alert.alert(
                       "Sin Dispositivos", 
                       "Añade tu primer dispositivo en la pantalla de Perfil para ver el análisis."
                     );
                   }
-                  // Si 'hasDevices' es true, no hace nada y deja que navegue.
                 },
               }}
             />
-            {/* --- 👆 FIN DEL CAMBIO 3 👆 --- */}
 
             <Tab.Screen name="Profile" component={ProfileScreen} />
         </Tab.Navigator>
@@ -142,7 +138,7 @@ const AppNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: false, // Ocultar header por defecto
+        headerShown: false, 
       }}
     >
       {isAuthenticated ? (
@@ -171,6 +167,15 @@ const AppNavigator = () => {
               headerBackTitle: '',
             }}
           />
+          {/* 🔥 CAMBIO CLAVE 2: Añadir la nueva pantalla de notificaciones al Stack */}
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
+            options={{
+              headerShown: false, // Usaremos el header personalizado dentro de la pantalla
+              presentation: 'modal', // Opción atractiva para notificaciones
+            }}
+          />
         </>
       ) : (
         // --- Pantallas para usuarios NO autenticados ---
@@ -180,13 +185,12 @@ const AppNavigator = () => {
           <Stack.Screen
             name="ForgotPassword"
             component={ForgotPasswordScreen}
-            options={{ headerShown: false }} // Sin header
+            options={{ headerShown: false }} 
           />
-          {/* --- 👇 Pantalla añadida aquí 👇 --- */}
           <Stack.Screen
             name="ResetPassword"
             component={ResetPasswordScreen}
-            options={{ headerShown: false }} // Sin header
+            options={{ headerShown: false }} 
           />
         </>
       )}

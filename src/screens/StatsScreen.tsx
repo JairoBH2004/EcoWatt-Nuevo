@@ -12,10 +12,10 @@ import { statsStyles } from '../styles/StatsStyles';
 import { useAuthStore } from '../store/useAuthStore';
 import { getHistoryGraph, HistoryDataPoint, getDevices } from '../services/authService';
 
-// --- CAMBIO DE IMPORTACIÓN DE SERVICIO ---
-// Importamos la función corregida y renombrada
+// --- SERVICIOS DE REPORTE ---
 import { generateEcoWattReport } from '../services/PDFGenerator'; 
-import { getMonthlyReport, MonthlyReportData } from '../services/reportService'; // <-- IMPORTACIÓN CORREGIDA
+// Importamos ambas funciones: histórico y actual
+import { getMonthlyReport, getCurrentMonthlyReport, MonthlyReportData } from '../services/reportService'; 
 import { requestStoragePermission } from '../utils/permissions';
 
 const ECOWATT_BACKGROUND = require('../assets/fondo.jpg');
@@ -70,7 +70,7 @@ const StatsScreen = () => {
     const [showWeeklyPicker, setShowWeeklyPicker] = useState(false);
     const [showMonthlyPicker, setShowMonthlyPicker] = useState(false);
 
-    // --- HELPERS DE FORMATO (se mantienen) ---
+    // --- HELPERS DE FORMATO ---
     const formatDateLabel = (timestamp: string, format: 'hour' | 'weekday' | 'dayMonth') => {
         const date = new Date(timestamp);
         if (isNaN(date.getTime())) return '?';
@@ -130,7 +130,7 @@ const StatsScreen = () => {
     const formatMonthlyLabel = (date: Date) => date.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
 
     // ---------------------------------------------------------
-    // CARGA DE DATOS (se mantiene)
+    // CARGA DE DATOS
     // ---------------------------------------------------------
     useEffect(() => {
         const loadAllData = async () => {
@@ -198,7 +198,7 @@ const StatsScreen = () => {
     }, [token, logout]);
 
     // ---------------------------------------------------------
-    // WEBSOCKET (se mantiene)
+    // WEBSOCKET
     // ---------------------------------------------------------
     useEffect(() => {
         const connectWebSocket = () => {
@@ -281,38 +281,55 @@ const StatsScreen = () => {
     }, [token, deviceId]); 
 
     // ---------------------------------------------------------
-    // REPORTE PDF (LÓGICA CORREGIDA)
+    // GENERACIÓN DE REPORTE (LÓGICA ACTUALIZADA)
     // ---------------------------------------------------------
     const handleGenerateReport = async () => {
         if (!token) return;
 
         const hasPermission = await requestStoragePermission();
-        
-        if (!hasPermission) {
-            return; 
-        }
+        if (!hasPermission) return; 
 
         setIsGeneratingReport(true);
         
         try {
-            // 🚨 NUEVA LÓGICA: Obtener mes y año de la fecha seleccionada
-            const reportMonth = selectedMonthlyDate.getMonth() + 1; // getMonth() es 0-11, sumamos 1
-            const reportYear = selectedMonthlyDate.getFullYear();
-
-            // Usar la función corregida y pasar el mes/año
-            const reportData: MonthlyReportData = await getMonthlyReport(token, reportMonth, reportYear);
+            // 1. Obtener fechas para comparar
+            const selectedMonthIndex = selectedMonthlyDate.getMonth(); // 0-11
+            const selectedYear = selectedMonthlyDate.getFullYear();
             
+            const today = new Date();
+            const currentMonthIndex = today.getMonth(); // 0-11
+            const currentYear = today.getFullYear();
+
+            // 2. Determinar si es el mes actual
+            const isCurrentMonth = selectedMonthIndex === currentMonthIndex && selectedYear === currentYear;
+
+            let reportData: MonthlyReportData;
+
+            if (isCurrentMonth) {
+                // CASO A: Es el mes en curso -> Usamos endpoint Tiempo Real (GET)
+                reportData = await getCurrentMonthlyReport(token);
+            } else {
+                // CASO B: Es un mes pasado -> Usamos endpoint Histórico (POST)
+                // Se suma 1 al mes porque el backend espera 1-12
+                reportData = await getMonthlyReport(token, selectedMonthIndex + 1, selectedYear);
+            }
+            
+            // 3. Generar PDF
             const result = await generateEcoWattReport(reportData);
 
             if (result.success) {
-                // Aquí el path es solo para Android: 'Guardado por el usuario'
-                Alert.alert("¡Reporte Listo!", `Revisa tu carpeta de descargas del sistema.`, [{ text: "OK" }]);
+                Alert.alert(
+                    "¡Reporte Listo!", 
+                    `El reporte (${isCurrentMonth ? 'Mes Actual' : 'Histórico'}) ha sido generado correctamente.`, 
+                    [{ text: "OK" }]
+                );
             } else {
-                Alert.alert("Error", result.error || "No se pudo crear el PDF. Verifica la conexión.");
+                Alert.alert("Error", result.error || "No se pudo crear el PDF.");
             }
 
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Fallo al generar reporte.");
+            console.error("Error generando reporte:", error);
+            Alert.alert("Aviso", "No se encontraron datos suficientes para generar este reporte todavía.");
         } finally {
             setIsGeneratingReport(false);
         }
@@ -324,7 +341,7 @@ const StatsScreen = () => {
     const chartContainerWidth = screenWidth - 70; 
     const stableSpacing = chartContainerWidth / MAX_REALTIME_POINTS;
 
-    // --- RENDER TOOLTIP COMPONENT (se mantiene) ---
+    // --- RENDER TOOLTIP COMPONENT ---
     const renderTooltip = (item: any) => {
         return (
             <View style={{
@@ -345,7 +362,7 @@ const StatsScreen = () => {
         );
     };
 
-    // --- DatePickerModal (se mantiene) ---
+    // --- DatePickerModal ---
     const DatePickerModal = ({ visible, onClose, options, selectedDate, onSelect, formatLabel }: any) => (
         <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
             <View style={statsStyles.modalBackground}>
@@ -383,7 +400,7 @@ const StatsScreen = () => {
                     <Text style={statsStyles.headerTitle}>Análisis de Consumo</Text>
                 </View>
 
-                {/* --- TIEMPO REAL --- (se mantiene) */}
+                {/* --- TIEMPO REAL --- */}
                 <View style={statsStyles.card}>
                     <View style={localStyles.cleanHeader}>
                         <Text style={localStyles.cardTitle}>Actual</Text>
@@ -426,9 +443,9 @@ const StatsScreen = () => {
                             spacing={stableSpacing}
                             color={LIVE_COLOR}
                             startFillColor={LIVE_COLOR} 
-                            endFillColor={LIVE_COLOR}  
+                            endFillColor={LIVE_COLOR}
                             startOpacity={0.3} 
-                            endOpacity={0.05}        
+                            endOpacity={0.05}
                             hideRules 
                             hideYAxisText 
                             hideDataPoints
@@ -440,7 +457,7 @@ const StatsScreen = () => {
                     </View>
                 </View>
 
-                {/* --- DIARIO --- (se mantiene) */}
+                {/* --- DIARIO --- */}
                 <View style={statsStyles.card}>
                     <View style={localStyles.cleanHeader}>
                         <Text style={localStyles.cardTitle}>Diario</Text>
@@ -470,7 +487,7 @@ const StatsScreen = () => {
                     )}
                 </View>
 
-                {/* --- SEMANAL --- (se mantiene) */}
+                {/* --- SEMANAL --- */}
                 <View style={statsStyles.card}>
                     <View style={localStyles.cleanHeader}>
                         <Text style={localStyles.cardTitle}>Semanal</Text>
@@ -500,7 +517,7 @@ const StatsScreen = () => {
                     )}
                 </View>
 
-                {/* --- MENSUAL Y REPORTE --- (se mantiene) */}
+                {/* --- MENSUAL Y REPORTE --- */}
                 <View style={statsStyles.card}>
                     <View style={localStyles.cleanHeader}>
                         <Text style={localStyles.cardTitle}>Mensual</Text>
