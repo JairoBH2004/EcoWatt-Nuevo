@@ -1,6 +1,5 @@
 // src/services/authService.ts
 
-// 🔥 NUEVA IMPORTACIÓN: Necesaria para obtener/establecer tokens globalmente
 import { useAuthStore } from '../store/useAuthStore'; 
 
 const API_BASE_URL = 'https://core-cloud.dev';
@@ -9,13 +8,10 @@ const API_BASE_URL = 'https://core-cloud.dev';
 // HELPER PARA MANEJAR ERRORES
 // ========================================
 const handleApiError = async (response: Response) => {
-    // Si el status es 401, lanzamos un error que el interceptor puede identificar
     if (response.status === 401) {
-        // Lanzamos un error que contiene el status para identificarlo en el interceptor
         throw new Error(`Unauthorized ${response.status}`); 
     }
     
-    // Lógica original para parsear errores 4xx y 5xx
     const data = await response.json();
     let errorMessage = 'Ocurrió un error inesperado.';
 
@@ -30,7 +26,7 @@ const handleApiError = async (response: Response) => {
 };
 
 // ========================================
-// INTERFACES (Cuerpo del archivo, sin cambios)
+// INTERFACES
 // ========================================
 
 interface UserRegistrationData {
@@ -94,11 +90,14 @@ export interface Device {
     dev_status: boolean;
     dev_brand: string;
     dev_model: string;
+    dev_mqtt_prefix?: string; // ✅ Agregado
 }
 
+// ✅ CORREGIDO: Interfaz alineada con el backend
 interface DeviceRegistrationData {
-    name: string;
-    mac: string;
+    dev_hardware_id: string;
+    dev_name: string;
+    dev_mqtt_prefix: string;
 }
 
 export interface HistoryDataPoint {
@@ -121,11 +120,39 @@ interface FcmRegistrationData {
     platform?: string;
 }
 
+// === INTERFACES DE CONTROL ===
+
+export interface DeviceStatusData {
+    id: number;
+    output: boolean;
+    apower: number;
+    voltage: number;
+    current: number;
+    temperature: {
+        tC: number;
+        tF: number;
+    };
+}
+
+export interface DeviceStatusResponse {
+    success: boolean;
+    device_name: string;
+    status: DeviceStatusData;
+}
+
+export interface ControlResponse {
+    success: boolean;
+    message: string;
+    device_name: string;
+    was_on: boolean;
+    new_state: boolean;
+    action: string;
+}
+
 // ========================================
-// 🔥 NUEVAS FUNCIONES CLAVE DE REFRESH
+// FUNCIONES CLAVE DE REFRESH
 // ========================================
 
-// 1. Función para llamar al endpoint de refresh (Pública para ser usada por el interceptor)
 export const refreshAccessToken = async (refreshToken: string): Promise<LoginResponse> => {
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
         method: 'POST',
@@ -140,39 +167,27 @@ export const refreshAccessToken = async (refreshToken: string): Promise<LoginRes
     return await response.json() as LoginResponse;
 };
 
-/**
- * 2. Helper que ejecuta la petición y maneja el refresco de token.
- * Recibe el token, el endpoint y las opciones de fetch.
- */
 async function fetchWithRefresh(endpoint: string, options: RequestInit): Promise<Response> {
     const store = useAuthStore.getState();
 
-    // 1. Ejecutar el fetch con el token actual (Access Token)
     let response = await fetch(endpoint, options);
 
-    // 2. Si el token expiró (401) y tenemos un Refresh Token
     if (response.status === 401 && store.refreshToken) {
         console.log('⚠️ Access Token expirado. Intentando refrescar...');
         
         try {
-            // 3. Refrescar tokens
             const newTokens = await refreshAccessToken(store.refreshToken);
-            
-            // 4. Actualizar el estado global
             store.login(newTokens.access_token, newTokens.refresh_token);
 
-            // 5. Actualizar los headers para el reintento
             const newHeaders = {
                 ...options.headers,
                 'Authorization': `Bearer ${newTokens.access_token}`,
             };
             
-            // 6. Reintentar la llamada API con el nuevo Access Token
             console.log('✅ Token renovado. Reintentando la llamada original...');
             response = await fetch(endpoint, { ...options, headers: newHeaders });
 
         } catch (error) {
-            // Si el refresh falla (e.g., Refresh Token también expiró)
             console.error('❌ Falló el refresco. Cerrando sesión.');
             store.logout();
             throw new Error('Sesión expirada. Por favor, inicia sesión de nuevo.');
@@ -183,10 +198,8 @@ async function fetchWithRefresh(endpoint: string, options: RequestInit): Promise
 }
 
 // ========================================
-// AUTENTICACIÓN Y USUARIO (MODIFICADO)
+// AUTENTICACIÓN Y USUARIO
 // ========================================
-
-// registerUser y loginUser (Públicas) permanecen IGUAL.
 
 export const registerUser = async (userData: UserRegistrationData) => {
     try {
@@ -219,7 +232,6 @@ export const loginUser = async (credentials: LoginCredentials): Promise<LoginRes
 };
 
 export const logoutUser = async (refreshToken: string) => {
-    // Permanece IGUAL.
     try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
             method: 'POST',
@@ -233,7 +245,6 @@ export const logoutUser = async (refreshToken: string) => {
 };
 
 export const requestPasswordReset = async (email: string): Promise<void> => {
-    // Permanece IGUAL.
     try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
             method: 'POST',
@@ -250,7 +261,6 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
 };
 
 export const resetPassword = async (resetData: ResetPasswordData): Promise<void> => {
-    // Permanece IGUAL.
     try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
             method: 'POST',
@@ -268,7 +278,6 @@ export const resetPassword = async (resetData: ResetPasswordData): Promise<void>
 };
 
 export const getUserProfile = async (token: string): Promise<UserProfile> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/users/me`;
         const response = await fetchWithRefresh(endpoint, {
@@ -279,7 +288,7 @@ export const getUserProfile = async (token: string): Promise<UserProfile> => {
         return await response.json();
     } catch (error) {
         if (error instanceof Error && error.message.includes('Unauthorized')) {
-            throw new Error('401'); // Propagar 401 para que HomeScreen pueda manejar el logout
+            throw new Error('401'); 
         }
         if (error instanceof Error) throw error;
         throw new Error('Error desconocido al obtener el perfil.');
@@ -287,7 +296,6 @@ export const getUserProfile = async (token: string): Promise<UserProfile> => {
 };
 
 export const updateUserProfile = async (token: string, userData: UpdateUserData): Promise<UserProfile> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string).
     try {
         const body = JSON.stringify(Object.fromEntries(
             Object.entries(userData).filter(([_, v]) => v !== undefined)
@@ -321,7 +329,6 @@ export const updateUserProfile = async (token: string, userData: UpdateUserData)
 // ========================================
 
 export const getDashboardSummary = async (token: string): Promise<DashboardSummary> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/dashboard/summary`;
         const response = await fetchWithRefresh(endpoint, {
@@ -347,7 +354,6 @@ export const getHistoryGraph = async (
     token: string,
     period: 'daily' | 'weekly' | 'monthly'
 ): Promise<HistoryGraphResponse> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string, ...).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/history/graph?period=${period}`;
         const response = await fetchWithRefresh(endpoint, {
@@ -366,7 +372,6 @@ export const getHistoryGraph = async (
 };
 
 export const getLast7DaysHistory = async (token: string): Promise<HistoryGraphResponse> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/history/last7days`;
         const response = await fetchWithRefresh(endpoint, {
@@ -388,11 +393,7 @@ export const getLast7DaysHistory = async (token: string): Promise<HistoryGraphRe
 // DISPOSITIVOS
 // ========================================
 
-/**
- * Obtiene todos los dispositivos del usuario
- */
 export const getDevices = async (token: string): Promise<Device[]> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/devices/`;
         const response = await fetchWithRefresh(endpoint, {
@@ -411,15 +412,16 @@ export const getDevices = async (token: string): Promise<Device[]> => {
 };
 
 /**
- * Registra un nuevo dispositivo Shelly
+ * ✅ CORREGIDO: Registra un nuevo dispositivo Shelly
  */
 export const registerDevice = async (
     token: string, 
     deviceData: DeviceRegistrationData
 ): Promise<Device> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string, ...).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/devices/`;
+        
+        // ✅ Ya enviamos los datos con los nombres correctos
         const response = await fetchWithRefresh(endpoint, {
             method: 'POST',
             headers: {
@@ -427,13 +429,13 @@ export const registerDevice = async (
                 'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
-                dev_hardware_id: deviceData.mac.toUpperCase(),
-                dev_name: deviceData.name,
+                dev_hardware_id: deviceData.dev_hardware_id.toUpperCase(),
+                dev_name: deviceData.dev_name,
+                dev_mqtt_prefix: deviceData.dev_mqtt_prefix,
             }),
         });
 
         if (!response.ok) {
-            // Mantenemos la lógica de manejo de errores específica
             if (response.status === 409) {
                 throw new Error('Este dispositivo ya está registrado en tu cuenta');
             }
@@ -453,15 +455,11 @@ export const registerDevice = async (
     }
 };
 
-/**
- * Actualiza el nombre de un dispositivo
- */
 export const updateDevice = async (
     token: string,
     deviceId: number,
     newName: string
 ): Promise<Device> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string, ...).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/devices/${deviceId}`;
         const response = await fetchWithRefresh(endpoint, {
@@ -487,11 +485,7 @@ export const updateDevice = async (
     }
 };
 
-/**
- * Elimina un dispositivo
- */
 export const deleteDevice = async (token: string, deviceId: number): Promise<void> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/devices/${deviceId}`;
         const response = await fetchWithRefresh(endpoint, {
@@ -517,14 +511,10 @@ export const deleteDevice = async (token: string, deviceId: number): Promise<voi
 // NOTIFICACIONES FCM
 // ========================================
 
-/**
- * Registra el token FCM para recibir notificaciones push
- */
 export const registerFcmToken = async (
     token: string,
     fcmData: FcmRegistrationData
 ): Promise<void> => {
-    // 🔥 MODIFICADO: Usa fetchWithRefresh. Mantiene la firma (token: string, ...).
     try {
         const endpoint = `${API_BASE_URL}/api/v1/fcm/register`;
         const response = await fetchWithRefresh(endpoint, {
@@ -550,4 +540,79 @@ export const registerFcmToken = async (
         if (error instanceof Error) throw error;
         throw new Error('Error desconocido al registrar el token FCM.');
     }
+};
+
+// ========================================
+// ✅ CONTROL DE DISPOSITIVOS (CORREGIDO)
+// ========================================
+
+/**
+ * Obtiene el estado en tiempo real del dispositivo
+ * GET /api/v1/control/{device_id}/status
+ */
+export const getDeviceStatus = async (
+    token: string, 
+    deviceId: number
+): Promise<DeviceStatusResponse> => {
+    const endpoint = `${API_BASE_URL}/api/v1/control/${deviceId}/status`;
+
+    const response = await fetchWithRefresh(endpoint, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+        await handleApiError(response);
+    }
+    return await response.json();
+};
+
+/**
+ * ✅ CORREGIDO: Fuerza un estado específico (ON/OFF explícito)
+ * POST /api/v1/control/{device_id}/set
+ * Body: { "state": true/false }
+ */
+export const setDeviceState = async (
+    token: string, 
+    deviceId: number, 
+    state: boolean
+): Promise<ControlResponse> => {
+    const endpoint = `${API_BASE_URL}/api/v1/control/${deviceId}/set`;
+    
+    const response = await fetchWithRefresh(endpoint, {
+        method: 'POST', 
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ state: state }),
+    });
+
+    if (!response.ok) {
+        await handleApiError(response);
+    }
+    return await response.json();
+};
+
+/**
+ * ✅ NUEVO: Alterna el estado (toggle)
+ * POST /api/v1/control/{device_id}/toggle
+ */
+export const toggleDevice = async (
+    token: string, 
+    deviceId: number
+): Promise<ControlResponse> => {
+    const endpoint = `${API_BASE_URL}/api/v1/control/${deviceId}/toggle`;
+    
+    const response = await fetchWithRefresh(endpoint, {
+        method: 'POST', 
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        await handleApiError(response);
+    }
+    return await response.json();
 };

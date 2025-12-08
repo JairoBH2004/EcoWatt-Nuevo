@@ -1,27 +1,25 @@
 // src/screens/EditProfileScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-    View, Text, TextInput, TouchableOpacity, Alert,
+    View, Text, TouchableOpacity, Alert,
     ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-// Importa la función y tipos necesarios
-import { updateUserProfile, UserProfile } from '../services/authService';
+import { updateUserProfile } from '../services/authService';
 import { useAuthStore } from '../store/useAuthStore';
 import styles from '../styles/EditProfileStyles'; 
-// 🔥 Importamos el tipo principal de navegación
 import { RootStackParamList } from '../navigation/AppNavigator'; 
 
-// 🔥 Usamos la prop directamente. El tipo de currentUser está definido en RootStackParamList
+// 🔥 AÑADIDO: Importamos el componente visual mejorado
+import CustomInput from '../components/CustomInput';
+
 type EditProfileScreenProps = NativeStackScreenProps<RootStackParamList, 'EditProfile'>;
 
 const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation }) => {
-    // Obtenemos el perfil actual pasado por parámetros
     const { currentUser } = route.params;
     const { token } = useAuthStore();
 
-    // Estados para los campos editables, inicializados con los datos actuales
     const [name, setName] = useState(currentUser.user_name);
     const [email, setEmail] = useState(currentUser.user_email);
     const [billingDay, setBillingDay] = useState(currentUser.user_billing_day.toString()); 
@@ -29,11 +27,9 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Función para manejar el guardado
     const handleSave = async () => {
         setError(''); 
 
-        // Validaciones básicas
         if (!name.trim() || !email.trim() || !billingDay.trim()) {
             setError('Todos los campos son obligatorios.');
             return;
@@ -47,13 +43,11 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
 
         setIsLoading(true);
 
-        // Construye el objeto solo con los datos que cambiaron
         const updatedData: { user_name?: string; user_email?: string; user_billing_day?: number } = {};
         if (name !== currentUser.user_name) updatedData.user_name = name;
         if (email !== currentUser.user_email) updatedData.user_email = email;
         if (dayNumber !== currentUser.user_billing_day) updatedData.user_billing_day = dayNumber;
 
-        // Si no cambió nada, no hacemos la llamada
         if (Object.keys(updatedData).length === 0) {
             setIsLoading(false);
             Alert.alert('Sin Cambios', 'No has modificado ningún dato.');
@@ -64,8 +58,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
         try {
             if (!token) throw new Error("Token no encontrado");
 
-            // Llama a la función del servicio
-            const updatedProfile = await updateUserProfile(token, updatedData);
+            await updateUserProfile(token, updatedData);
 
             setIsLoading(false);
             Alert.alert('Éxito', 'Perfil actualizado correctamente.');
@@ -77,7 +70,6 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
         }
     };
 
-    // Vista de Carga mientras se guarda
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
@@ -96,10 +88,10 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
                 <ScrollView contentContainerStyle={styles.container}>
                     <Text style={styles.title}>Editar Perfil</Text>
 
-                    {/* Campo Nombre */}
+                    {/* Campo Nombre (MEJORADO) */}
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Nombre Completo</Text>
-                        <TextInput
+                        <CustomInput
                             style={styles.input}
                             value={name}
                             onChangeText={setName}
@@ -108,10 +100,10 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
                         />
                     </View>
 
-                    {/* Campo Email */}
+                    {/* Campo Email (MEJORADO) */}
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Correo Electrónico</Text>
-                        <TextInput
+                        <CustomInput
                             style={styles.input}
                             value={email}
                             onChangeText={setEmail}
@@ -122,10 +114,10 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
                         />
                     </View>
 
-                    {/* Campo Día de Corte */}
+                    {/* Campo Día de Corte (MEJORADO) */}
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Día de Corte (1-31)</Text>
-                        <TextInput
+                        <CustomInput
                             style={styles.input}
                             value={billingDay}
                             onChangeText={setBillingDay}
@@ -136,7 +128,7 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
                         />
                     </View>
 
-                    {/* Campo Tarifa CFE (No editable) */}
+                    {/* Campo Tarifa CFE (No editable, se queda igual) */}
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Tarifa CFE (No editable)</Text>
                         <View style={styles.readOnlyField}>
@@ -144,10 +136,8 @@ const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ route, navigation
                         </View>
                     </View>
 
-                    {/* Mensaje de Error */}
                     {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-                    {/* Botón Guardar */}
                     <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                         <Text style={styles.saveButtonText}>Guardar Cambios</Text>
                     </TouchableOpacity>

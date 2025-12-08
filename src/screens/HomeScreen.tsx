@@ -18,6 +18,9 @@ import {
     getLast7DaysHistory
 } from '../services/authService';
 
+// 👇 IMPORTACIÓN DEL NUEVO COMPONENTE SKELETON
+import SkeletonLoader from '../components/SkeletonLoader';
+
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -53,7 +56,7 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     
-    // 🔥 Estado para alternar la vista de CO2 a Árboles
+    // Estado para alternar la vista de CO2 a Árboles
     const [showTrees, setShowTrees] = useState(false);
 
     // Obtener el contador de notificaciones no leídas
@@ -135,7 +138,8 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
                     logout();
                 }
             } finally {
-                setIsLoading(false);
+                // Pequeño delay artificial para que se aprecie el Skeleton (opcional, puedes quitarlo)
+                setTimeout(() => setIsLoading(false), 500);
             }
         };
 
@@ -143,13 +147,39 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
     }, [token, logout, setHasDevices]);
 
 
-    // --- RENDERIZADO ---
+    // 🔥 VISTA DE CARGA (SKELETON LOADER)
     if (isLoading) {
         return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color={PRIMARY_GREEN} />
-                <Text style={{ color: '#FFF', marginTop: 10 }}>Cargando...</Text>
-            </View>
+            <ImageBackground source={ECOWATT_BACKGROUND} style={styles.container} resizeMode="cover">
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+                <SafeAreaView style={{ flex: 1 }}>
+                    <View style={{ padding: 20 }}>
+                        {/* Header Skeleton */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                            <View>
+                                <SkeletonLoader width={150} height={25} style={{ marginBottom: 10 }} />
+                                <SkeletonLoader width={100} height={15} />
+                            </View>
+                            <SkeletonLoader width={40} height={40} borderRadius={20} />
+                        </View>
+
+                        {/* Main Card Skeleton */}
+                        <SkeletonLoader width="100%" height={120} borderRadius={16} style={{ marginBottom: 20 }} />
+
+                        {/* Small Cards Row Skeleton */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                            <SkeletonLoader width={(screenWidth / 2) - 30} height={100} borderRadius={16} />
+                            <SkeletonLoader width={(screenWidth / 2) - 30} height={100} borderRadius={16} />
+                        </View>
+
+                        {/* Recommendation Skeleton */}
+                        <SkeletonLoader width="100%" height={60} borderRadius={12} style={{ marginBottom: 20 }} />
+
+                        {/* Graph Skeleton */}
+                        <SkeletonLoader width="100%" height={220} borderRadius={16} />
+                    </View>
+                </SafeAreaView>
+            </ImageBackground>
         );
     }
 
@@ -227,26 +257,27 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
                         <Text style={styles.smallCardLabel}>Consumo del Ciclo</Text>
                     </View>
                     
-                    {/* 🔥 CARD DE CO₂ INTERACTIVO CON TOGGLE */}
+                    {/* 🔥 CARD DE CO₂ INTERACTIVO CON INDICADOR VISUAL */}
                     <TouchableOpacity 
                         style={styles.smallCard}
-                        onPress={() => setShowTrees(!showTrees)} // Alterna entre true/false
-                        activeOpacity={0.7} // Efecto visual al tocar
+                        onPress={() => setShowTrees(!showTrees)} 
+                        activeOpacity={0.7} 
                     >
-                        {/* Cambia el icono: 'leaf' para CO2, 'tree' para árboles */}
+                        {/* Indicador visual de rotación en la esquina */}
+                        <View style={{ position: 'absolute', top: 8, right: 8, opacity: 0.6 }}>
+                             <Icon name="sync-alt" size={12} color={PRIMARY_GREEN} />
+                        </View>
+
                         <Icon name={showTrees ? "tree" : "leaf"} size={24} color={PRIMARY_GREEN} />
                         
-                        {/* Cambia el valor numérico */}
                         <Text style={styles.smallCardValue}>
                             {showTrees 
                                 ? (summary?.carbon_footprint?.equivalent_trees_absorption_per_year?.toFixed(1) || 0) 
                                 : (summary?.carbon_footprint?.co2_emitted_kg?.toFixed(1) || 0)
                             } 
-                            {/* Cambia la unidad: nada para árboles, 'kg' para CO2 */}
                             {showTrees ? '' : ' kg'}
                         </Text>
                         
-                        {/* Cambia la etiqueta inferior */}
                         <Text style={styles.smallCardLabel}>
                             {showTrees ? "Árboles Eq." : "CO₂ Emitido"}
                         </Text>
@@ -263,9 +294,13 @@ const HomeScreen = ({ navigation }: HomeScreenProps) => {
                     <Text style={styles.graphTitle}>Consumo Últimos {graphData?.labels.length || 0} Días</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {!graphData ? (
-                            <View style={[styles.graphPlaceholder, { width: screenWidth - 70, height: 220 }]}>
-                                <ActivityIndicator color={PRIMARY_GREEN} />
-                            </View>
+                            // Placeholder con Skeleton si no hay datos gráficos
+                            <SkeletonLoader 
+                                width={screenWidth - 70} 
+                                height={220} 
+                                borderRadius={16} 
+                                style={{ backgroundColor: '#1E2A47', opacity: 0.5 }} 
+                            />
                         ) : (
                             <View>
                                 <BarChart

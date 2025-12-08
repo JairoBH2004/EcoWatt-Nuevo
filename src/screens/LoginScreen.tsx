@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
     View,
     Text,
-    TextInput,
     TouchableOpacity,
     Image,
     ActivityIndicator,
@@ -20,9 +19,10 @@ import styles, {
     COLOR_PRIMARY_GREEN,
 } from '../styles/loginStyles';
 
-// 🔥 AÑADIDO: Importar el servicio completo de inicialización de notificaciones
-import { initializeNotificationService } from '../services/notificationService';
+// 🔥 AÑADIDO: Importar el componente de Input Mejorado
+import CustomInput from '../components/CustomInput';
 
+import { initializeNotificationService } from '../services/notificationService';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 const logo = require('../assets/logo.png');
@@ -53,10 +53,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             login(data.access_token, data.refresh_token);
 
-            // 🔥 PASO CLAVE: Inicializar el servicio de notificaciones
-            // Esto pide permisos, obtiene el token FCM y lo registra en el backend.
+            // Inicializar notificaciones
             initializeNotificationService(data.access_token); 
-
 
         } catch (err: any) {
             console.log('Error en login:', err);
@@ -88,9 +86,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
                     {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
+                    {/* INPUT DE EMAIL MEJORADO */}
                     <View style={styles.inputContainer}>
                         <Icon name="user" size={20} color="#888" style={styles.inputIcon} />
-                        <TextInput 
+                        <CustomInput 
                             style={styles.input} 
                             placeholder="Correo Electrónico" 
                             autoCapitalize="none"
@@ -101,12 +100,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                         />
                     </View>
 
+                    {/* INPUT DE CONTRASEÑA MEJORADO */}
                     <View style={styles.inputContainer}>
                         <Icon name="lock" size={20} color="#888" style={styles.inputIcon} />
-                        <TextInput
+                        <CustomInput
                             style={[
                                 styles.input,
-                                { color: '#000', fontFamily: undefined },
+                                { color: '#000', fontFamily: undefined, paddingRight: 40 }, // Ajuste para el ojo
                             ]}
                             placeholder="Contraseña"
                             placeholderTextColor="#888"
@@ -115,12 +115,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                             onChangeText={setPassword}
                         />
 
-                        <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                        <TouchableOpacity 
+                            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                            style={{ position: 'absolute', right: 15, top: 15 }} // Ajuste de posición del ojo
+                        >
                             <Icon 
                                 name={isPasswordVisible ? "eye-slash" : "eye"} 
                                 size={20} 
                                 color={COLOR_PRIMARY_GREEN} 
-                                style={styles.eyeIcon}
                             />
                         </TouchableOpacity>
                     </View>
