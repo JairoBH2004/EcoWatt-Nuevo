@@ -1,102 +1,3 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
-
-# Getting Started
-
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
-
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
-
-
 # EcoWatt Frontend - Documentación Técnica Completa
 
 > **Versión:** 1.0.0  
@@ -918,9 +819,12 @@ const token = useAuthStore.getState().token;
 useAuthStore.getState().logout();
 ```
 
-6.2 Zustand - Store de Notificaciones
-Archivo: src/store/useNotificationStore.ts
-typescriptinterface NotificationItem {
+### 6.2 Zustand - Store de Notificaciones
+
+**Archivo: `src/store/useNotificationStore.ts`**
+
+```typescript
+interface NotificationItem {
   id: string;
   title: string;
   body: string;
@@ -994,8 +898,12 @@ export const useNotificationStore = create<NotificationState>()(
     }
   )
 );
-Uso típico:
-typescript// En NotificationsScreen
+```
+
+**Uso típico:**
+
+```typescript
+// En NotificationsScreen
 const { notifications, unreadCount, markAsRead } = useNotificationStore();
 
 // En HomeScreen (badge)
@@ -1006,15 +914,33 @@ useNotificationStore.getState().addNotification({
   title: 'Alerta de Consumo',
   body: 'Tu consumo superó el 80% del límite'
 });
-6.3 Ventajas de Zustand vs Redux
-CaracterísticaZustandReduxBoilerplateMínimoAltoCurva de aprendizajeBajaAltaTypeScriptNativoRequiere configuraciónTamaño del bundle~1KB~12KBPersistenciaMiddleware simpleredux-persist complejoAcceso fuera de ReactgetState() directoRequiere store import
+```
 
-7. Componentes Reutilizables
-7.1 CustomInput
-Archivo: src/components/CustomInput.tsx
-Propósito: Input mejorado con animación de focus y estilos consistentes.
-Código completo:
-typescriptimport React, { useState } from 'react';
+### 6.3 Ventajas de Zustand vs Redux
+
+| Característica | Zustand | Redux |
+|----------------|---------|-------|
+| Boilerplate | Mínimo | Alto |
+| Curva de aprendizaje | Baja | Alta |
+| TypeScript | Nativo | Requiere configuración |
+| Tamaño del bundle | ~1KB | ~12KB |
+| Persistencia | Middleware simple | redux-persist complejo |
+| Acceso fuera de React | `getState()` directo | Requiere store import |
+
+---
+
+## 7. Componentes Reutilizables
+
+### 7.1 CustomInput
+
+**Archivo: `src/components/CustomInput.tsx`**
+
+**Propósito:** Input mejorado con animación de focus y estilos consistentes.
+
+**Código completo:**
+
+```typescript
+import React, { useState } from 'react';
 import { TextInput, TextInputProps, StyleSheet, StyleProp, TextStyle } from 'react-native';
 
 interface CustomInputProps extends TextInputProps {
@@ -1065,15 +991,18 @@ const styles = StyleSheet.create({
 });
 
 export default CustomInput;
-Características:
+```
 
-✅ Hereda todos los props de TextInput nativo
-✅ Animación suave de borde al hacer focus
-✅ Compatible con estilos externos
-✅ Color de placeholder consistente
+**Características:**
+- ✅ Hereda todos los props de `TextInput` nativo
+- ✅ Animación suave de borde al hacer focus
+- ✅ Compatible con estilos externos
+- ✅ Color de placeholder consistente
 
-Uso en pantallas:
-typescript<CustomInput
+**Uso en pantallas:**
+
+```typescript
+<CustomInput
   style={{ marginTop: 20 }} // Estilos adicionales
   placeholder="Correo Electrónico"
   keyboardType="email-address"
@@ -1081,11 +1010,18 @@ typescript<CustomInput
   value={email}
   onChangeText={setEmail}
 />
-7.2 SkeletonLoader
-Archivo: src/components/SkeletonLoader.tsx
-Propósito: Placeholder animado durante carga de datos.
-Código completo:
-typescriptimport React, { useEffect, useRef } from 'react';
+```
+
+### 7.2 SkeletonLoader
+
+**Archivo: `src/components/SkeletonLoader.tsx`**
+
+**Propósito:** Placeholder animado durante carga de datos.
+
+**Código completo:**
+
+```typescript
+import React, { useEffect, useRef } from 'react';
 import { View, Animated, ViewStyle, StyleSheet } from 'react-native';
 
 interface SkeletonLoaderProps {
@@ -1139,8 +1075,12 @@ const styles = StyleSheet.create({
 });
 
 export default SkeletonLoader;
-Uso típico:
-typescript// Durante carga de HomeScreen
+```
+
+**Uso típico:**
+
+```typescript
+// Durante carga de HomeScreen
 {isLoading && (
   <>
     <SkeletonLoader width="100%" height={120} borderRadius={16} style={{ marginBottom: 20 }} />
@@ -1150,15 +1090,26 @@ typescript// Durante carga de HomeScreen
     </View>
   </>
 )}
-Resultado visual:
+```
+
+**Resultado visual:**
+```
 ┌────────────────────────────┐
 │ ███████░░░░░░░░░░░░░██████ │ ← Animación de pulso
 └────────────────────────────┘
+```
 
-8. Pantallas (Screens)
-8.1 LoginScreen
-Archivo: src/screens/LoginScreen.tsx
-Flujo de usuario:
+---
+
+## 8. Pantallas (Screens)
+
+### 8.1 LoginScreen
+
+**Archivo: `src/screens/LoginScreen.tsx`**
+
+**Flujo de usuario:**
+
+```
 1. Usuario ingresa email + contraseña
 2. Presiona botón "INGRESAR"
 3. Validación local (campos no vacíos)
@@ -1169,8 +1120,12 @@ Flujo de usuario:
    └─ Navegar automáticamente a MainApp
 6. Si error:
    └─ Mostrar mensaje de error
-Componentes principales:
-typescriptconst LoginScreen = ({ navigation }) => {
+```
+
+**Componentes principales:**
+
+```typescript
+const LoginScreen = ({ navigation }) => {
   const { login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1255,18 +1210,24 @@ typescriptconst LoginScreen = ({ navigation }) => {
     </LinearGradient>
   );
 };
-Características especiales:
+```
 
-Gradiente azul → verde
-Input con icono de ojo para mostrar/ocultar contraseña
-Manejo de errores inline
-Loading state con ActivityIndicator
+**Características especiales:**
+- Gradiente azul → verde
+- Input con icono de ojo para mostrar/ocultar contraseña
+- Manejo de errores inline
+- Loading state con ActivityIndicator
 
-8.2 HomeScreen
-Archivo: src/screens/HomeScreen.tsx
-Propósito: Dashboard principal con resumen de consumo.
-Datos mostrados:
-typescriptinterface DashboardData {
+### 8.2 HomeScreen
+
+**Archivo: `src/screens/HomeScreen.tsx`**
+
+**Propósito:** Dashboard principal con resumen de consumo.
+
+**Datos mostrados:**
+
+```typescript
+interface DashboardData {
   // Tarjeta principal
   estimated_cost_mxn: number;
   days_in_cycle: number;
@@ -1284,7 +1245,11 @@ typescriptinterface DashboardData {
   // Gráfica
   last7days: { timestamp: string, value: number }[];
 }
-Estructura visual:
+```
+
+**Estructura visual:**
+
+```
 ┌─────────────────────────────┐
 │ ¡Hola, Juan!         🔔(3)  │
 ├─────────────────────────────┤
@@ -1301,8 +1266,12 @@ Estructura visual:
 │   Consumo Últimos 7 Días    │
 │  📊 [Gráfica de barras]     │
 └─────────────────────────────┘
-Lógica de carga:
-typescriptconst HomeScreen = ({ navigation }) => {
+```
+
+**Lógica de carga:**
+
+```typescript
+const HomeScreen = ({ navigation }) => {
   const { token, logout, setHasDevices } = useAuthStore();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -1472,17 +1441,23 @@ typescriptconst HomeScreen = ({ navigation }) => {
     </ScrollView>
   );
 };
-Optimizaciones:
+```
 
-Promise.all para cargar datos en paralelo
-Skeleton loaders para mejor UX
-Badge reactivo de notificaciones
-Toggle CO2 ↔ Árboles (tap en tarjeta)
+**Optimizaciones:**
+- Promise.all para cargar datos en paralelo
+- Skeleton loaders para mejor UX
+- Badge reactivo de notificaciones
+- Toggle CO2 ↔ Árboles (tap en tarjeta)
 
-8.3 StatsScreen
-Archivo: src/screens/StatsScreen.tsx
-Propósito: Análisis detallado con gráficas y datos en tiempo real.
-Secciones:
+### 8.3 StatsScreen
+
+**Archivo: `src/screens/StatsScreen.tsx`**
+
+**Propósito:** Análisis detallado con gráficas y datos en tiempo real.
+
+**Secciones:**
+
+```
 ┌─────────────────────────────┐
 │    CONSUMO EN TIEMPO REAL   │
 │   ⚡ 1,234 WATTS (EN VIVO)  │
@@ -1501,8 +1476,12 @@ Secciones:
 │   [Botón: Generar PDF]      │
 │   [Gráfica de barras]       │
 └─────────────────────────────┘
-WebSocket para datos en vivo:
-typescriptconst StatsScreen = () => {
+```
+
+**WebSocket para datos en vivo:**
+
+```typescript
+const StatsScreen = () => {
   const { token } = useAuthStore();
   const [deviceId, setDeviceId] = useState<number | null>(null);
   const [realtimeData, setRealtimeData] = useState<ChartDataItem[]>([]);
@@ -1661,8 +1640,12 @@ typescriptconst StatsScreen = () => {
     </ScrollView>
   );
 };
-Componente LivePulseBadge:
-typescriptconst LivePulseBadge = ({ status }: { status: string }) => {
+```
+
+**Componente LivePulseBadge:**
+
+```typescript
+const LivePulseBadge = ({ status }: { status: string }) => {
   const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -1699,8 +1682,12 @@ typescriptconst LivePulseBadge = ({ status }: { status: string }) => {
     </View>
   );
 };
-Generación de reporte PDF:
-typescriptconst handleGenerateReport = async () => {
+```
+
+**Generación de reporte PDF:**
+
+```typescript
+const handleGenerateReport = async () => {
   if (!token) return;
   
   // Solicitar permisos de almacenamiento
@@ -1729,10 +1716,17 @@ typescriptconst handleGenerateReport = async () => {
     setIsGeneratingReport(false);
   }
 };
-8.4 AddDeviceScreen
-Archivo: src/screens/AddDeviceScreen.tsx
-Propósito: Configurar y registrar dispositivos Shelly.
-Proceso completo (6 fases):
+```
+
+### 8.4 AddDeviceScreen
+
+**Archivo: `src/screens/AddDeviceScreen.tsx`**
+
+**Propósito:** Configurar y registrar dispositivos Shelly.
+
+**Proceso completo (6 fases):**
+
+```
 FASE 1: Configuración WiFi
 ─────────────────────────
 ├─ Verificar credenciales guardadas
@@ -1804,10 +1798,13 @@ FASE 5: Registro en Backend
 
 FASE 6: Éxito
 ─────────────────────────
-└─ Pantalla de confirmación + Botón "Finalizar"tate().addNotification({
-  title: 'Alerta de Consumo
-Código de configuración MQTT:
-typescriptawait fetchWithTimeout(`http://192.168.33.1/rpc/Mqtt.SetConfig`, {
+└─ Pantalla de confirmación + Botón "Finalizar"
+```
+
+**Código de configuración MQTT:**
+
+```typescript
+await fetchWithTimeout(`http://192.168.33.1/rpc/Mqtt.SetConfig`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1825,8 +1822,12 @@ typescriptawait fetchWithTimeout(`http://192.168.33.1/rpc/Mqtt.SetConfig`, {
     }
   })
 }, 10000);
-Código del script de ingestión:
-typescriptconst monitoringScript = `
+```
+
+**Código del script de ingestión:**
+
+```typescript
+const monitoringScript = `
 let CONFIG = {
     webhook_url: "${INGESTION_URL}",
     interval: 10000 
@@ -1881,17 +1882,23 @@ await fetchWithTimeout(`http://192.168.33.1/rpc/Script.PutCode`, {
     code: monitoringScript 
   })
 }, 8000);
-⚠️ Puntos críticos:
+```
 
-MAC en minúsculas para MQTT, mayúsculas para BD
-PutCode es más robusto que Create con code inline
-Timeout de 8s después de reboot antes de llamar API
-fetchWithTimeout previene cuelgues indefinidos
+**⚠️ Puntos críticos:**
+- **MAC en minúsculas para MQTT**, mayúsculas para BD
+- **PutCode** es más robusto que Create con code inline
+- **Timeout de 8s** después de reboot antes de llamar API
+- **fetchWithTimeout** previene cuelgues indefinidos
 
-8.5 ProfileScreen
-Archivo: src/screens/ProfileScreen.tsx
-Propósito: Gestión de perfil y control de dispositivos.
-Estructura visual:
+### 8.5 ProfileScreen
+
+**Archivo: `src/screens/ProfileScreen.tsx`**
+
+**Propósito:** Gestión de perfil y control de dispositivos.
+
+**Estructura visual:**
+
+```
 ┌─────────────────────────────┐
 │          [Editar]           │
 │      👤 Juan Pérez          │
@@ -1914,8 +1921,12 @@ Estructura visual:
 ├─────────────────────────────┤
 │     [Cerrar Sesión]         │
 └─────────────────────────────┘
-Lógica de control con optimistic update:
-typescriptconst ProfileScreen = ({ navigation }) => {
+```
+
+**Lógica de control con optimistic update:**
+
+```typescript
+const ProfileScreen = ({ navigation }) => {
   const { token, logout } = useAuthStore();
   const [devices, setDevices] = useState<Device[]>([]);
   const [togglingDeviceId, setTogglingDeviceId] = useState<number | null>(null);
@@ -2098,18 +2109,24 @@ typescriptconst ProfileScreen = ({ navigation }) => {
     />
   );
 };
-Ventajas del optimistic update:
+```
 
-✅ UI responde instantáneamente
-✅ Usuario no espera respuesta del servidor
-✅ Si falla, se revierte automáticamente
-✅ Si la luz se va, se sincroniza en próxima carga
+**Ventajas del optimistic update:**
+- ✅ UI responde instantáneamente
+- ✅ Usuario no espera respuesta del servidor
+- ✅ Si falla, se revierte automáticamente
+- ✅ Si la luz se va, se sincroniza en próxima carga
 
-8.6 NotificationsScreen
-Archivo: src/screens/NotificationsScreen.tsx
-Propósito: Centro de notificaciones con historial persistente.
-Código completo:
-typescriptconst NotificationsScreen = ({ navigation }) => {
+### 8.6 NotificationsScreen
+
+**Archivo: `src/screens/NotificationsScreen.tsx`**
+
+**Propósito:** Centro de notificaciones con historial persistente.
+
+**Código completo:**
+
+```typescript
+const NotificationsScreen = ({ navigation }) => {
   const { notifications, markAsRead, markAllAsRead, unreadCount, clearAll } = useNotificationStore();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -2225,20 +2242,27 @@ const formatDate = (isoDateString: string) => {
     minute: '2-digit' 
   })}`;
 };
-Características:
+```
 
-✅ Badge de punto verde en no leídas
-✅ Opacidad reducida en leídas
-✅ Icono de campana sólida/outline
-✅ Timestamp formateado
-✅ Empty state elegante
+**Características:**
+- ✅ Badge de punto verde en no leídas
+- ✅ Opacidad reducida en leídas
+- ✅ Icono de campana sólida/outline
+- ✅ Timestamp formateado
+- ✅ Empty state elegante
 
+---
 
-9. Servicios
-9.1 authService.ts
-Archivo: src/services/authService.ts
-9.1.1 Manejo de Errores Centralizado
-typescriptconst handleApiError = async (response: Response) => {
+## 9. Servicios
+
+### 9.1 authService.ts
+
+**Archivo: `src/services/authService.ts`**
+
+#### 9.1.1 Manejo de Errores Centralizado
+
+```typescript
+const handleApiError = async (response: Response) => {
   if (response.status === 401) {
     throw new Error(`Unauthorized ${response.status}`);
   }
@@ -2256,14 +2280,17 @@ typescriptconst handleApiError = async (response: Response) => {
   
   throw new Error(errorMessage);
 };
-Beneficios:
+```
 
-Manejo consistente de errores FastAPI
-Mensajes amigables al usuario
-Lanza excepciones tipadas
+**Beneficios:**
+- Manejo consistente de errores FastAPI
+- Mensajes amigables al usuario
+- Lanza excepciones tipadas
 
-9.1.2 Wrapper con Auto-Refresh
-typescriptasync function fetchWithRefresh(endpoint: string, options: RequestInit): Promise<Response> {
+#### 9.1.2 Wrapper con Auto-Refresh
+
+```typescript
+async function fetchWithRefresh(endpoint: string, options: RequestInit): Promise<Response> {
   const store = useAuthStore.getState();
 
   // Primer intento
@@ -2298,7 +2325,11 @@ typescriptasync function fetchWithRefresh(endpoint: string, options: RequestInit
   
   return response;
 }
-Flujo visual:
+```
+
+**Flujo visual:**
+
+```
 ┌─────────────────────┐
 │  fetch(endpoint)    │
 └──────────┬──────────┘
@@ -2335,9 +2366,13 @@ Flujo visual:
    ┌─────────────────────────┐
    │  Retornar response      │
    └─────────────────────────┘
-9.1.3 Endpoints Principales
-Registro:
-typescriptexport const registerUser = async (userData: UserRegistrationData) => {
+```
+
+#### 9.1.3 Endpoints Principales
+
+**Registro:**
+```typescript
+export const registerUser = async (userData: UserRegistrationData) => {
   const response = await fetch(`${API_BASE_URL}/api/v1/users/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2347,8 +2382,11 @@ typescriptexport const registerUser = async (userData: UserRegistrationData) => 
   if (!response.ok) await handleApiError(response);
   return await response.json();
 };
-Login:
-typescriptexport const loginUser = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+```
+
+**Login:**
+```typescript
+export const loginUser = async (credentials: LoginCredentials): Promise<LoginResponse> => {
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2358,8 +2396,11 @@ typescriptexport const loginUser = async (credentials: LoginCredentials): Promis
   if (!response.ok) await handleApiError(response);
   return await response.json() as LoginResponse;
 };
-Perfil:
-typescriptexport const getUserProfile = async (token: string): Promise<UserProfile> => {
+```
+
+**Perfil:**
+```typescript
+export const getUserProfile = async (token: string): Promise<UserProfile> => {
   const endpoint = `${API_BASE_URL}/api/v1/users/me`;
   const response = await fetchWithRefresh(endpoint, {
     method: 'GET',
@@ -2369,8 +2410,11 @@ typescriptexport const getUserProfile = async (token: string): Promise<UserProfi
   if (!response.ok) await handleApiError(response);
   return await response.json();
 };
-Dashboard:
-typescriptexport const getDashboardSummary = async (token: string): Promise<DashboardSummary> => {
+```
+
+**Dashboard:**
+```typescript
+export const getDashboardSummary = async (token: string): Promise<DashboardSummary> => {
   const endpoint = `${API_BASE_URL}/api/v1/dashboard/summary`;
   const response = await fetchWithRefresh(endpoint, {
     method: 'GET',
@@ -2380,8 +2424,11 @@ typescriptexport const getDashboardSummary = async (token: string): Promise<Dash
   if (!response.ok) await handleApiError(response);
   return await response.json();
 };
-Control de Dispositivos:
-typescriptexport const setDeviceState = async (
+```
+
+**Control de Dispositivos:**
+```typescript
+export const setDeviceState = async (
   token: string, 
   deviceId: number, 
   state: boolean
@@ -2400,10 +2447,17 @@ typescriptexport const setDeviceState = async (
   if (!response.ok) await handleApiError(response);
   return await response.json();
 };
-9.2 notificationService.ts
-Archivo: src/services/notificationService.ts
-Propósito: Gestión completa de Firebase Cloud Messaging.
-9.2.1 Flujo de Inicialización
+```
+
+### 9.2 notificationService.ts
+
+**Archivo: `src/services/notificationService.ts`**
+
+**Propósito:** Gestión completa de Firebase Cloud Messaging.
+
+#### 9.2.1 Flujo de Inicialización
+
+```
 ┌──────────────────────────────┐
 │ 1. requestNotificationPerm() │
 └────────────┬─────────────────┘
@@ -2426,8 +2480,12 @@ Propósito: Gestión completa de Firebase Cloud Messaging.
 │    → onNotificationOpened()  │
 │    → getInitialNotification()│
 └──────────────────────────────┘
-9.2.2 Solicitar Permisos
-typescriptexport async function requestNotificationPermission() {
+```
+
+#### 9.2.2 Solicitar Permisos
+
+```typescript
+export async function requestNotificationPermission() {
   try {
     // Android 13+ requiere permiso runtime
     if (Platform.OS === 'android' && Platform.Version >= 33) {
@@ -2459,8 +2517,12 @@ typescriptexport async function requestNotificationPermission() {
     return false;
   }
 }
-9.2.3 Obtener Token FCM
-typescriptexport async function getFCMToken() {
+```
+
+#### 9.2.3 Obtener Token FCM
+
+```typescript
+export async function getFCMToken() {
   try {
     // iOS requiere registro explícito
     if (Platform.OS === 'ios') {
@@ -2475,8 +2537,12 @@ typescriptexport async function getFCMToken() {
     return null;
   }
 }
-9.2.4 Registrar en Backend
-typescriptexport async function registerFCMToken(accessToken: string) {
+```
+
+#### 9.2.4 Registrar en Backend
+
+```typescript
+export async function registerFCMToken(accessToken: string) {
   try {
     const fcmToken = await getFCMToken();
     if (!fcmToken) return false;
@@ -2509,8 +2575,12 @@ typescriptexport async function registerFCMToken(accessToken: string) {
     return false;
   }
 }
-9.2.5 Configurar Listeners
-typescriptexport function setupNotificationListeners() {
+```
+
+#### 9.2.5 Configurar Listeners
+
+```typescript
+export function setupNotificationListeners() {
   const addNotification = useNotificationStore.getState().addNotification;
   
   const handleNotification = (remoteMessage: any) => {
@@ -2547,8 +2617,12 @@ typescriptexport function setupNotificationListeners() {
 
   return unsubscribe;
 }
-9.2.6 Función de Inicialización Completa
-typescriptexport async function initializeNotificationService(accessToken: string) {
+```
+
+#### 9.2.6 Función de Inicialización Completa
+
+```typescript
+export async function initializeNotificationService(accessToken: string) {
   try {
     // 1. Permisos
     const hasPermission = await requestNotificationPermission();
@@ -2568,8 +2642,12 @@ typescriptexport async function initializeNotificationService(accessToken: strin
     return false;
   }
 }
-Uso en la app:
-typescript// En useAuthStore.ts - Al hacer login
+```
+
+**Uso en la app:**
+
+```typescript
+// En useAuthStore.ts - Al hacer login
 login: (accessToken, refreshToken) => {
   set({
     isAuthenticated: true,
@@ -2588,12 +2666,18 @@ onRehydrateStorage: () => (state) => {
     initializeNotificationService(state.token);
   }
 },
-9.3 reportService.ts
-Archivo: src/services/reportService.ts
-Propósito: Obtener datos para reportes mensuales.
+```
 
-9.3.1 Reporte Histórico (Meses Pasados)
-typescriptexport const getMonthlyReport = async (
+### 9.3 reportService.ts
+
+**Archivo: `src/services/reportService.ts`**
+
+**Propósito:** Obtener datos para reportes mensuales.
+
+#### 9.3.1 Reporte Histórico (Meses Pasados)
+
+```typescript
+export const getMonthlyReport = async (
   token: string, 
   month: number, // 1-12
   year: number
@@ -2613,8 +2697,12 @@ typescriptexport const getMonthlyReport = async (
   
   return await response.json() as MonthlyReportData;
 };
-9.3.2 Reporte del Mes Actual (Tiempo Real)
-typescriptexport const getCurrentMonthlyReport = async (token: string): Promise<MonthlyReportData> => {
+```
+
+#### 9.3.2 Reporte del Mes Actual (Tiempo Real)
+
+```typescript
+export const getCurrentMonthlyReport = async (token: string): Promise<MonthlyReportData> => {
   const response = await fetch(`${API_BASE_URL}/api/v1/reports/monthly/current`, {
     method: 'GET',
     headers: { 'Authorization': `Bearer ${token}` }
@@ -2626,16 +2714,22 @@ typescriptexport const getCurrentMonthlyReport = async (token: string): Promise<
   
   return await response.json() as MonthlyReportData;
 };
-Diferencia clave:
+```
 
-Histórico usa POST con mes/año específico → Lee de PostgreSQL
-Actual usa GET → Lee de Redis (datos en tiempo real)
+**Diferencia clave:**
+- **Histórico** usa POST con mes/año específico → Lee de PostgreSQL
+- **Actual** usa GET → Lee de Redis (datos en tiempo real)
 
-9.4 PDFGenerator.tsx
-Archivo: src/services/PDFGenerator.tsx
-Propósito: Generar reportes PDF con datos de consumo y costos CFE.
-9.4.1 Estructura del Reporte
-typescriptinterface MonthlyReportData {
+### 9.4 PDFGenerator.tsx
+
+**Archivo: `src/services/PDFGenerator.tsx`**
+
+**Propósito:** Generar reportes PDF con datos de consumo y costos CFE.
+
+#### 9.4.1 Estructura del Reporte
+
+```typescript
+interface MonthlyReportData {
   header: {
     period_month: string;
     user_name: string;
@@ -2662,8 +2756,12 @@ typescriptinterface MonthlyReportData {
   alerts: Alert[];
   recommendations: string[];
 }
-9.4.2 Análisis de Ahorro
-typescriptconst calculateSavingsData = (data: MonthlyReportData) => {
+```
+
+#### 9.4.2 Análisis de Ahorro
+
+```typescript
+const calculateSavingsData = (data: MonthlyReportData) => {
   // Buscar consumo en tarifa "Excedente"
   const excedenteLevel = data.cost_breakdown.tariff_levels.find(
     (l: TariffLevel) => l.level_name.includes("Excedente")
@@ -2685,8 +2783,12 @@ typescriptconst calculateSavingsData = (data: MonthlyReportData) => {
     message: `El consumo en tarifa Excedente representó <strong>${excedenteLevel.subtotal_mxn.toFixed(2)}</strong> extra. ¡Intenta reducirlo!`
   };
 };
-9.4.3 Template HTML del PDF
-typescriptconst getReportHtml = (data: MonthlyReportData): string => {
+```
+
+#### 9.4.3 Template HTML del PDF
+
+```typescript
+const getReportHtml = (data: MonthlyReportData): string => {
   const savings = calculateSavingsData(data);
   const generatedDate = new Date().toLocaleDateString('es-MX', { 
     year: 'numeric', 
@@ -2928,8 +3030,12 @@ typescriptconst getReportHtml = (data: MonthlyReportData): string => {
     </html>
   `;
 };
-9.4.4 Función de Generación
-typescriptexport const generateEcoWattReport = async (reportData: MonthlyReportData): Promise<PDFResult> => {
+```
+
+#### 9.4.4 Función de Generación
+
+```typescript
+export const generateEcoWattReport = async (reportData: MonthlyReportData): Promise<PDFResult> => {
   try {
     console.log("📄 Iniciando generación de PDF...");
     
@@ -2957,13 +3063,21 @@ typescriptexport const generateEcoWattReport = async (reportData: MonthlyReportD
     };
   }
 };
-Nota importante para Android:
+```
+
+**Nota importante para Android:**
 El usuario debe seleccionar manualmente "Guardar como PDF" desde el selector de impresoras. La app no controla la ruta final del archivo por limitaciones de la API.
 
-10. Estilos y Diseño
-10.1 Sistema de Colores
-Paleta principal:
-typescript// Colores primarios
+---
+
+## 10. Estilos y Diseño
+
+### 10.1 Sistema de Colores
+
+**Paleta principal:**
+
+```typescript
+// Colores primarios
 const COLOR_PRIMARY_BLUE = '#003366';    // Azul oscuro corporativo
 const COLOR_PRIMARY_GREEN = '#00FF7F';   // Verde neón (acción)
 const COLOR_ACCENT_GREEN = 'rgba(0, 255, 127, 0.15)'; // Verde transparente
@@ -2984,8 +3098,12 @@ const COLOR_TEXT_MUTED = '#888888';      // Texto secundario
 // Colores especiales
 const LIVE_COLOR = '#FF4500';            // Naranja para datos en vivo
 const BORDER_COLOR = 'rgba(255, 255, 255, 0.1)'; // Bordes sutiles
-Uso en componentes:
-typescript// Tarjeta con fondo semitransparente
+```
+
+**Uso en componentes:**
+
+```typescript
+// Tarjeta con fondo semitransparente
 <View style={{
   backgroundColor: 'rgba(0, 0, 0, 0.4)',
   borderRadius: 15,
@@ -3007,9 +3125,14 @@ typescript// Tarjeta con fondo semitransparente
 }}>
   <Text style={{ color: '#003366', fontWeight: 'bold' }}>Acción</Text>
 </TouchableOpacity>
-10.2 Tipografía
-Jerarquía de texto:
-typescriptconst typography = StyleSheet.create({
+```
+
+### 10.2 Tipografía
+
+**Jerarquía de texto:**
+
+```typescript
+const typography = StyleSheet.create({
   h1: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -3049,9 +3172,14 @@ typescriptconst typography = StyleSheet.create({
     letterSpacing: 1,
   },
 });
-10.3 Espaciado y Layout
-Sistema de spacing:
-typescriptconst spacing = {
+```
+
+### 10.3 Espaciado y Layout
+
+**Sistema de spacing:**
+
+```typescript
+const spacing = {
   xs: 4,
   sm: 8,
   md: 16,
@@ -3065,8 +3193,12 @@ typescriptconst spacing = {
   padding: spacing.lg,
   marginBottom: spacing.md,
 }}>
-Grid system:
-typescript// Tarjetas en 2 columnas
+```
+
+**Grid system:**
+
+```typescript
+// Tarjetas en 2 columnas
 <View style={{
   flexDirection: 'row',
   justifyContent: 'space-between',
@@ -3079,9 +3211,14 @@ typescript// Tarjetas en 2 columnas
     {/* Tarjeta 2 */}
   </View>
 </View>
-10.4 Componentes de UI Comunes
-Tarjeta con glassmorphism:
-typescriptconst glassCard = {
+```
+
+### 10.4 Componentes de UI Comunes
+
+**Tarjeta con glassmorphism:**
+
+```typescript
+const glassCard = {
   backgroundColor: 'rgba(20, 20, 30, 0.75)',
   borderRadius: 24,
   padding: 20,
@@ -3093,8 +3230,12 @@ typescriptconst glassCard = {
   shadowRadius: 10,
   elevation: 5,
 };
-Badge de notificación:
-typescriptconst notificationBadge = {
+```
+
+**Badge de notificación:**
+
+```typescript
+const notificationBadge = {
   position: 'absolute',
   right: -8,
   top: -8,
@@ -3106,8 +3247,12 @@ typescriptconst notificationBadge = {
   alignItems: 'center',
   zIndex: 10,
 };
-Tab bar flotante:
-typescripttabBarStyle: {
+```
+
+**Tab bar flotante:**
+
+```typescript
+tabBarStyle: {
   position: 'absolute',
   bottom: Platform.OS === 'ios' ? 30 : 20,
   left: 20,
@@ -3122,9 +3267,14 @@ typescripttabBarStyle: {
   shadowOpacity: 0.4,
   shadowRadius: 8,
 }
-10.5 Responsividad
-Uso de Dimensions:
-typescriptimport { Dimensions } from 'react-native';
+```
+
+### 10.5 Responsividad
+
+**Uso de Dimensions:**
+
+```typescript
+import { Dimensions } from 'react-native';
 
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
@@ -3141,8 +3291,12 @@ const screenHeight = Dimensions.get('window').height;
   width: screenWidth * 0.9,
   maxWidth: 400, // Límite para tablets
 }}>
-Detección de orientación:
-typescriptimport { useWindowDimensions } from 'react-native';
+```
+
+**Detección de orientación:**
+
+```typescript
+import { useWindowDimensions } from 'react-native';
 
 const MyComponent = () => {
   const { width, height } = useWindowDimensions();
@@ -3156,12 +3310,20 @@ const MyComponent = () => {
     </View>
   );
 };
+```
 
-11. Integraciones
-11.1 Firebase Cloud Messaging
-Configuración completa ya cubierta en sección 9.2
-Payload de notificación esperado:
-json{
+---
+
+## 11. Integraciones
+
+### 11.1 Firebase Cloud Messaging
+
+**Configuración completa ya cubierta en sección 9.2**
+
+**Payload de notificación esperado:**
+
+```json
+{
   "notification": {
     "title": "Alerta de Consumo",
     "body": "Tu consumo superó el 80% del límite mensual"
@@ -3172,8 +3334,12 @@ json{
     "threshold": "80"
   }
 }
-Manejo en el store:
-typescript// Guardar en historial local
+```
+
+**Manejo en el store:**
+
+```typescript
+// Guardar en historial local
 addNotification({
   title: notification.title,
   body: notification.body
@@ -3183,15 +3349,31 @@ addNotification({
 if (data.type === 'consumption_alert') {
   navigation.navigate('Stats');
 }
-11.2 WebSocket (Datos en Tiempo Real)
-Conexión:
-typescriptconst ws = new WebSocket(
+```
+
+### 11.2 WebSocket (Datos en Tiempo Real)
+
+**Conexión:**
+
+```typescript
+const ws = new WebSocket(
   `wss://core-cloud.dev/ws/live/${deviceId}?token=${token}`
 );
-Estados del WebSocket:
-EstadoSignificadoAcción en UIconnectingEstableciendo conexiónMostrar "CONECTANDO..."connectedConexión activaBadge verde pulsante "EN VIVO"disconnectedSin conexiónBadge gris "OFFLINE"errorError de conexiónMostrar mensaje de error
-Reconexión automática:
-typescript// Reintentar hasta 3 veces con backoff exponencial
+```
+
+**Estados del WebSocket:**
+
+| Estado | Significado | Acción en UI |
+|--------|-------------|--------------|
+| `connecting` | Estableciendo conexión | Mostrar "CONECTANDO..." |
+| `connected` | Conexión activa | Badge verde pulsante "EN VIVO" |
+| `disconnected` | Sin conexión | Badge gris "OFFLINE" |
+| `error` | Error de conexión | Mostrar mensaje de error |
+
+**Reconexión automática:**
+
+```typescript
+// Reintentar hasta 3 veces con backoff exponencial
 socket.onclose = (e) => {
   if (e.code !== 1000 && reconnectAttempts < 3) {
     const delay = 1000 * (reconnectAttempts + 1);
@@ -3199,59 +3381,98 @@ socket.onclose = (e) => {
     reconnectAttempts++;
   }
 };
-Formato de mensaje recibido:
-json{
+```
+
+**Formato de mensaje recibido:**
+
+```json
+{
   "watts": 1234.56,
   "timestamp": "2025-12-11T10:30:00Z"
 }
+```
+
 O alternativas compatibles:
-json{ "apower": 1234.56 }
+```json
+{ "apower": 1234.56 }
 { "power": 1234.56 }
 { "value": 1234.56 }
-11.3 WiFi Manager (Escaneo y Conexión)
-Permisos necesarios (Android):
-xml<!-- AndroidManifest.xml -->
+```
+
+### 11.3 WiFi Manager (Escaneo y Conexión)
+
+**Permisos necesarios (Android):**
+
+```xml
+<!-- AndroidManifest.xml -->
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
 <!-- Android 13+ -->
 <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
-Escanear redes:
-typescriptimport WifiManager from 'react-native-wifi-reborn';
+```
+
+**Escanear redes:**
+
+```typescript
+import WifiManager from 'react-native-wifi-reborn';
 
 const networks = await WifiManager.loadWifiList();
 const shellyNetworks = networks.filter(n => 
   n.SSID.toLowerCase().startsWith('shelly')
 );
-Conectar a red:
-typescriptawait WifiManager.connectToProtectedSSID(
+```
+
+**Conectar a red:**
+
+```typescript
+await WifiManager.connectToProtectedSSID(
   'ShellyPlus1PM-AABBCCDDEE01', // SSID
   '',                            // Password (vacío para Shelly AP)
   false,                         // isWEP
   false                          // isHidden
 );
-Verificar conexión:
-typescriptconst currentSSID = await WifiManager.getCurrentWifiSSID();
-console.log('Conectado a:', currentSSID);
+```
 
-12. Optimizaciones y Performance
-12.1 Optimización de Re-renders
-useMemo para datos procesados:
-typescriptconst processedData = useMemo(() => {
+**Verificar conexión:**
+
+```typescript
+const currentSSID = await WifiManager.getCurrentWifiSSID();
+console.log('Conectado a:', currentSSID);
+```
+
+---
+
+## 12. Optimizaciones y Performance
+
+### 12.1 Optimización de Re-renders
+
+**useMemo para datos procesados:**
+
+```typescript
+const processedData = useMemo(() => {
   return data.map(item => ({
     ...item,
     formattedValue: formatValue(item.value)
   }));
 }, [data]);
-useCallback para funciones pasadas a hijos:
-typescriptconst handlePress = useCallback((id: number) => {
+```
+
+**useCallback para funciones pasadas a hijos:**
+
+```typescript
+const handlePress = useCallback((id: number) => {
   console.log('Pressed:', id);
 }, []); // Sin dependencias si no usa estado externo
 
 <ChildComponent onPress={handlePress} />
-React.memo para componentes puros:
-typescriptconst DeviceRow = React.memo(({ item, onToggle }) => {
+```
+
+**React.memo para componentes puros:**
+
+```typescript
+const DeviceRow = React.memo(({ item, onToggle }) => {
   return (
     <View>
       <Text>{item.name}</Text>
@@ -3259,10 +3480,18 @@ typescriptconst DeviceRow = React.memo(({ item, onToggle }) => {
     </View>
   );
 });
-12.2 Lazy Loading de Imágenes
-Uso de FastImage (recomendado para producción):
-bashnpm install react-native-fast-image
-typescriptimport FastImage from 'react-native-fast-image';
+```
+
+### 12.2 Lazy Loading de Imágenes
+
+**Uso de FastImage (recomendado para producción):**
+
+```bash
+npm install react-native-fast-image
+```
+
+```typescript
+import FastImage from 'react-native-fast-image';
 
 <FastImage
   style={{ width: 200, height: 200 }}
@@ -3272,9 +3501,14 @@ typescriptimport FastImage from 'react-native-fast-image';
   }}
   resizeMode={FastImage.resizeMode.cover}
 />
-12.3 Virtualización de Listas
-FlatList con optimizaciones:
-typescript<FlatList
+```
+
+### 12.3 Virtualización de Listas
+
+**FlatList con optimizaciones:**
+
+```typescript
+<FlatList
   data={devices}
   renderItem={({ item }) => <DeviceRow item={item} />}
   keyExtractor={(item) => item.dev_id.toString()}
@@ -3294,9 +3528,14 @@ typescript<FlatList
   onEndReached={loadMore}
   onEndReachedThreshold={0.5}
 />
-12.4 Caché de Datos
-Estrategia de caché con AsyncStorage:
-typescriptconst CACHE_KEY = 'dashboard_summary';
+```
+
+### 12.4 Caché de Datos
+
+**Estrategia de caché con AsyncStorage:**
+
+```typescript
+const CACHE_KEY = 'dashboard_summary';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 const getCachedData = async () => {
@@ -3320,8 +3559,12 @@ const setCachedData = async (data: any) => {
     }));
   } catch (e) {}
 };
-12.5 Debounce de Búsquedas
-typescriptimport { useCallback, useEffect, useState } from 'react';
+```
+
+### 12.5 Debounce de Búsquedas
+
+```typescript
+import { useCallback, useEffect, useState } from 'react';
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -3356,11 +3599,18 @@ const SearchScreen = () => {
     />
   );
 };
+```
 
-13. Seguridad
-13.1 Almacenamiento Seguro de Tokens
-Zustand + AsyncStorage:
-typescript// ✅ BUENO: Tokens en AsyncStorage (encriptado en iOS, protegido en Android)
+---
+
+## 13. Seguridad
+
+### 13.1 Almacenamiento Seguro de Tokens
+
+**Zustand + AsyncStorage:**
+
+```typescript
+// ✅ BUENO: Tokens en AsyncStorage (encriptado en iOS, protegido en Android)
 persist(
   (set, get) => ({ /* estado */ }),
   {
@@ -3370,9 +3620,16 @@ persist(
 )
 
 // ❌ MALO: Tokens en variables globales o localStorage web
-Para mayor seguridad (opcional):
-bashnpm install react-native-keychain
-typescriptimport * as Keychain from 'react-native-keychain';
+```
+
+**Para mayor seguridad (opcional):**
+
+```bash
+npm install react-native-keychain
+```
+
+```typescript
+import * as Keychain from 'react-native-keychain';
 
 // Guardar
 await Keychain.setGenericPassword('token', accessToken);
@@ -3382,9 +3639,14 @@ const credentials = await Keychain.getGenericPassword();
 if (credentials) {
   console.log('Token:', credentials.password);
 }
-13.2 Validación de Inputs
-Ejemplo: Validación de email:
-typescriptconst isValidEmail = (email: string): boolean => {
+```
+
+### 13.2 Validación de Inputs
+
+**Ejemplo: Validación de email:**
+
+```typescript
+const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
@@ -3402,9 +3664,14 @@ const handleRegister = async () => {
   
   // Continuar con registro...
 };
-13.3 Sanitización de Datos
-Prevención de XSS en WebView:
-typescriptconst sanitizeHtml = (html: string): string => {
+```
+
+### 13.3 Sanitización de Datos
+
+**Prevención de XSS en WebView:**
+
+```typescript
+const sanitizeHtml = (html: string): string => {
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+="[^"
