@@ -918,12 +918,9 @@ const token = useAuthStore.getState().token;
 useAuthStore.getState().logout();
 ```
 
-### 6.2 Zustand - Store de Notificaciones
-
-**Archivo: `src/store/useNotificationStore.ts`**
-
-```typescript
-interface NotificationItem {
+6.2 Zustand - Store de Notificaciones
+Archivo: src/store/useNotificationStore.ts
+typescriptinterface NotificationItem {
   id: string;
   title: string;
   body: string;
@@ -997,12 +994,8 @@ export const useNotificationStore = create<NotificationState>()(
     }
   )
 );
-```
-
-**Uso típico:**
-
-```typescript
-// En NotificationsScreen
+Uso típico:
+typescript// En NotificationsScreen
 const { notifications, unreadCount, markAsRead } = useNotificationStore();
 
 // En HomeScreen (badge)
@@ -1010,4 +1003,2408 @@ const unreadCount = useNotificationStore(state => state.unreadCount);
 
 // En notificationService (agregar nueva)
 useNotificationStore.getState().addNotification({
+  title: 'Alerta de Consumo',
+  body: 'Tu consumo superó el 80% del límite'
+});
+6.3 Ventajas de Zustand vs Redux
+CaracterísticaZustandReduxBoilerplateMínimoAltoCurva de aprendizajeBajaAltaTypeScriptNativoRequiere configuraciónTamaño del bundle~1KB~12KBPersistenciaMiddleware simpleredux-persist complejoAcceso fuera de ReactgetState() directoRequiere store import
+
+7. Componentes Reutilizables
+7.1 CustomInput
+Archivo: src/components/CustomInput.tsx
+Propósito: Input mejorado con animación de focus y estilos consistentes.
+Código completo:
+typescriptimport React, { useState } from 'react';
+import { TextInput, TextInputProps, StyleSheet, StyleProp, TextStyle } from 'react-native';
+
+interface CustomInputProps extends TextInputProps {
+  style?: StyleProp<TextStyle>;
+}
+
+const CustomInput = ({ style, ...props }: CustomInputProps) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <TextInput
+      {...props}
+      onFocus={(e) => {
+        setIsFocused(true);
+        props.onFocus && props.onFocus(e);
+      }}
+      onBlur={(e) => {
+        setIsFocused(false);
+        props.onBlur && props.onBlur(e);
+      }}
+      style={[
+        styles.input,
+        style,
+        isFocused && styles.inputFocused
+      ]}
+      placeholderTextColor="#888"
+    />
+  );
+};
+
+const styles = StyleSheet.create({
+  input: {
+    height: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: 15,
+  },
+  inputFocused: {
+    borderColor: '#00FF7F', // Verde brillante
+    borderWidth: 2,
+    backgroundColor: '#FFFFFF',
+  },
+});
+
+export default CustomInput;
+Características:
+
+✅ Hereda todos los props de TextInput nativo
+✅ Animación suave de borde al hacer focus
+✅ Compatible con estilos externos
+✅ Color de placeholder consistente
+
+Uso en pantallas:
+typescript<CustomInput
+  style={{ marginTop: 20 }} // Estilos adicionales
+  placeholder="Correo Electrónico"
+  keyboardType="email-address"
+  autoCapitalize="none"
+  value={email}
+  onChangeText={setEmail}
+/>
+7.2 SkeletonLoader
+Archivo: src/components/SkeletonLoader.tsx
+Propósito: Placeholder animado durante carga de datos.
+Código completo:
+typescriptimport React, { useEffect, useRef } from 'react';
+import { View, Animated, ViewStyle, StyleSheet } from 'react-native';
+
+interface SkeletonLoaderProps {
+  width?: number | string;
+  height?: number | string;
+  style?: ViewStyle;
+  borderRadius?: number;
+}
+
+const SkeletonLoader = ({ 
+  width = '100%', 
+  height = 20, 
+  style, 
+  borderRadius = 8 
+}: SkeletonLoaderProps) => {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { 
+          toValue: 0.7, 
+          duration: 800, 
+          useNativeDriver: true 
+        }),
+        Animated.timing(opacity, { 
+          toValue: 0.3, 
+          duration: 800, 
+          useNativeDriver: true 
+        }),
+      ])
+    ).start();
+  }, [opacity]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.skeleton,
+        { opacity, width, height, borderRadius } as any,
+        style
+      ]}
+    />
+  );
+};
+
+const styles = StyleSheet.create({
+  skeleton: {
+    backgroundColor: '#E0E0E0',
+    overflow: 'hidden',
+  },
+});
+
+export default SkeletonLoader;
+Uso típico:
+typescript// Durante carga de HomeScreen
+{isLoading && (
+  <>
+    <SkeletonLoader width="100%" height={120} borderRadius={16} style={{ marginBottom: 20 }} />
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <SkeletonLoader width={(screenWidth / 2) - 30} height={100} borderRadius={16} />
+      <SkeletonLoader width={(screenWidth / 2) - 30} height={100} borderRadius={16} />
+    </View>
+  </>
+)}
+Resultado visual:
+┌────────────────────────────┐
+│ ███████░░░░░░░░░░░░░██████ │ ← Animación de pulso
+└────────────────────────────┘
+
+8. Pantallas (Screens)
+8.1 LoginScreen
+Archivo: src/screens/LoginScreen.tsx
+Flujo de usuario:
+1. Usuario ingresa email + contraseña
+2. Presiona botón "INGRESAR"
+3. Validación local (campos no vacíos)
+4. Llamada a authService.loginUser()
+5. Si éxito:
+   ├─ Guardar tokens en useAuthStore
+   ├─ Inicializar notificaciones FCM
+   └─ Navegar automáticamente a MainApp
+6. Si error:
+   └─ Mostrar mensaje de error
+Componentes principales:
+typescriptconst LoginScreen = ({ navigation }) => {
+  const { login } = useAuthStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Por favor, completa ambos campos.');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const data = await loginUser({
+        user_email: email,
+        user_password: password
+      });
+
+      // Guardar tokens
+      login(data.access_token, data.refresh_token);
+
+      // Inicializar notificaciones
+      initializeNotificationService(data.access_token);
+
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <LinearGradient colors={['#003366', '#66CC66']}>
+      {/* Logo */}
+      <Image source={logo} style={styles.loginLogo} />
+      
+      {/* Formulario */}
+      <View style={styles.formPanel}>
+        <Text style={styles.formTitle}>Bienvenido de nuevo</Text>
+        
+        {error && <Text style={styles.errorText}>{error}</Text>}
+        
+        {/* Email */}
+        <View style={styles.inputContainer}>
+          <Icon name="user" size={20} color="#888" />
+          <CustomInput 
+            placeholder="Correo Electrónico"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+        
+        {/* Password con toggle de visibilidad */}
+        <View style={styles.inputContainer}>
+          <Icon name="lock" size={20} color="#888" />
+          <CustomInput
+            placeholder="Contraseña"
+            secureTextEntry={!isPasswordVisible}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+            <Icon name={isPasswordVisible ? "eye-slash" : "eye"} size={20} color="#00FF7F" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Botones */}
+        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Text style={styles.loginButtonText}>INGRESAR</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
+  );
+};
+Características especiales:
+
+Gradiente azul → verde
+Input con icono de ojo para mostrar/ocultar contraseña
+Manejo de errores inline
+Loading state con ActivityIndicator
+
+8.2 HomeScreen
+Archivo: src/screens/HomeScreen.tsx
+Propósito: Dashboard principal con resumen de consumo.
+Datos mostrados:
+typescriptinterface DashboardData {
+  // Tarjeta principal
+  estimated_cost_mxn: number;
+  days_in_cycle: number;
+  
+  // Tarjetas pequeñas
+  kwh_consumed_cycle: number;
+  carbon_footprint: {
+    co2_emitted_kg: number;
+    equivalent_trees_absorption_per_year: number;
+  };
+  
+  // Recomendación
+  latest_recommendation: string;
+  
+  // Gráfica
+  last7days: { timestamp: string, value: number }[];
+}
+Estructura visual:
+┌─────────────────────────────┐
+│ ¡Hola, Juan!         🔔(3)  │
+├─────────────────────────────┤
+│  Costo Estimado del Periodo │
+│      $1,234.56 MXN          │
+│   Días en el ciclo: 15      │
+├─────────────────────────────┤
+│ [125.4 kWh]  [12.3 kg CO₂]  │
+│  Consumo      Emisiones     │
+├─────────────────────────────┤
+│ 💡 Reduce consumo en horas  │
+│    pico (6pm-10pm)          │
+├─────────────────────────────┤
+│   Consumo Últimos 7 Días    │
+│  📊 [Gráfica de barras]     │
+└─────────────────────────────┘
+Lógica de carga:
+typescriptconst HomeScreen = ({ navigation }) => {
+  const { token, logout, setHasDevices } = useAuthStore();
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Contador de notificaciones no leídas
+  const unreadCount = useNotificationStore(state => state.unreadCount);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [token]);
+
+  const loadInitialData = async () => {
+    if (!token) {
+      logout();
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // 1. Cargar perfil
+      const profileData = await getUserProfile(token);
+      setProfile(profileData);
+
+      // 2. Cargar dispositivos
+      let devicesData: Device[] = [];
+      try {
+        devicesData = await getDevices(token);
+        setDevices(devicesData);
+      } catch (err: any) {
+        if (err.message.includes('404')) {
+          setDevices([]);
+        }
+      }
+
+      // 3. Si hay dispositivos, cargar datos
+      if (devicesData.length > 0) {
+        setHasDevices(true);
+
+        const [summaryData, historyData] = await Promise.all([
+          getDashboardSummary(token),
+          getLast7DaysHistory(token)
+        ]);
+        
+        setSummary(summaryData);
+        
+        // Procesar datos de gráfica
+        if (historyData?.data_points) {
+          const labels = historyData.data_points.map(p => {
+            const date = new Date(p.timestamp);
+            return ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][date.getDay()];
+          });
+          
+          const values = historyData.data_points.map(p => p.value);
+          
+          setGraphData({
+            labels,
+            datasets: [{ data: values }]
+          });
+        }
+      } else {
+        setHasDevices(false);
+      }
+
+    } catch (err: any) {
+      if (err.message.includes('401')) {
+        logout();
+      }
+    } finally {
+      setTimeout(() => setIsLoading(false), 500);
+    }
+  };
+
+  // Skeleton loader durante carga
+  if (isLoading) {
+    return (
+      <View>
+        <SkeletonLoader width="100%" height={120} />
+        <SkeletonLoader width="48%" height={100} />
+        {/* ... más skeletons */}
+      </View>
+    );
+  }
+
+  // Si no hay dispositivos
+  if (devices.length === 0) {
+    return (
+      <View style={styles.centeredContent}>
+        <Icon name="plus-circle" size={50} color="#00FF7F" />
+        <Text>¡Bienvenido a EcoWatt!</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('AddDevice')}>
+          <Text>Añadir Dispositivo</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Dashboard con datos
+  return (
+    <ScrollView>
+      {/* Header con badge de notificaciones */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>¡Hola, {profile?.user_name}!</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+          <Icon name="bell" size={24} color="#FFF" />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text>{unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Tarjeta principal */}
+      <View style={styles.mainCard}>
+        <Text>Costo Estimado del Periodo</Text>
+        <Text style={styles.projectedCost}>
+          ${summary?.estimated_cost_mxn?.toFixed(2) || '0.00'} MXN
+        </Text>
+      </View>
+
+      {/* Tarjetas de consumo y CO2 */}
+      <View style={styles.smallCardsContainer}>
+        <View style={styles.smallCard}>
+          <Icon name="bolt" size={24} color="#00FF7F" />
+          <Text>{summary?.kwh_consumed_cycle?.toFixed(2)} kWh</Text>
+          <Text>Consumo del Ciclo</Text>
+        </View>
+        
+        {/* Tarjeta de CO2 con toggle */}
+        <TouchableOpacity 
+          style={styles.smallCard}
+          onPress={() => setShowTrees(!showTrees)}
+        >
+          <Icon name={showTrees ? "tree" : "leaf"} size={24} color="#00FF7F" />
+          <Text>
+            {showTrees 
+              ? summary?.carbon_footprint?.equivalent_trees_absorption_per_year?.toFixed(1)
+              : summary?.carbon_footprint?.co2_emitted_kg?.toFixed(1)
+            }
+          </Text>
+          <Text>{showTrees ? "Árboles Eq." : "CO₂ Emitido"}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Recomendación */}
+      <View style={styles.recommendationCard}>
+        <Icon name="lightbulb" size={24} color="#003366" />
+        <Text>{summary?.latest_recommendation}</Text>
+      </View>
+
+      {/* Gráfica */}
+      <View style={styles.graphContainer}>
+        <Text>Consumo Últimos 7 Días</Text>
+        <BarChart
+          data={graphData}
+          width={screenWidth - 60}
+          height={220}
+          chartConfig={{
+            backgroundColor: '#1E2A47',
+            color: (opacity = 1) => `rgba(0, 255, 127, ${opacity})`,
+          }}
+        />
+      </View>
+    </ScrollView>
+  );
+};
+Optimizaciones:
+
+Promise.all para cargar datos en paralelo
+Skeleton loaders para mejor UX
+Badge reactivo de notificaciones
+Toggle CO2 ↔ Árboles (tap en tarjeta)
+
+8.3 StatsScreen
+Archivo: src/screens/StatsScreen.tsx
+Propósito: Análisis detallado con gráficas y datos en tiempo real.
+Secciones:
+┌─────────────────────────────┐
+│    CONSUMO EN TIEMPO REAL   │
+│   ⚡ 1,234 WATTS (EN VIVO)  │
+│   [Gráfica de línea]        │
+├─────────────────────────────┤
+│    HISTORIAL DIARIO         │
+│   [Selector de fecha]       │
+│   [Gráfica de barras]       │
+├─────────────────────────────┤
+│    HISTORIAL SEMANAL        │
+│   [Selector de fecha]       │
+│   [Gráfica de barras]       │
+├─────────────────────────────┤
+│    REPORTES MENSUALES       │
+│   [Selector de mes]         │
+│   [Botón: Generar PDF]      │
+│   [Gráfica de barras]       │
+└─────────────────────────────┘
+WebSocket para datos en vivo:
+typescriptconst StatsScreen = () => {
+  const { token } = useAuthStore();
+  const [deviceId, setDeviceId] = useState<number | null>(null);
+  const [realtimeData, setRealtimeData] = useState<ChartDataItem[]>([]);
+  const [currentWatts, setCurrentWatts] = useState<number | null>(null);
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  
+  const ws = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 3;
+  const MAX_REALTIME_POINTS = 30;
+
+  // Cargar ID del primer dispositivo
+  useEffect(() => {
+    const loadDevice = async () => {
+      const devices = await getDevices(token);
+      if (devices.length > 0) {
+        setDeviceId(devices[0].dev_id);
+      }
+    };
+    loadDevice();
+  }, [token]);
+
+  // Conectar WebSocket
+  useEffect(() => {
+    const connectWebSocket = () => {
+      if (!token || !deviceId) return;
+      if (ws.current?.readyState === WebSocket.OPEN) return;
+
+      setWsStatus('connecting');
+      
+      const socket = new WebSocket(
+        `wss://core-cloud.dev/ws/live/${deviceId}?token=${token}`
+      );
+
+      socket.onopen = () => {
+        console.log('✅ WebSocket conectado');
+        setWsStatus('connected');
+        reconnectAttemptsRef.current = 0;
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          // Backend puede enviar: watts, apower, power o value
+          const watts = message.watts ?? message.apower ?? message.power ?? message.value;
+          
+          if (typeof watts === 'number') {
+            setCurrentWatts(watts);
+            
+            // Agregar punto a la gráfica
+            setRealtimeData(prev => {
+              const newData = [
+                ...prev, 
+                { value: watts, label: '', frontColor: '#FF4500' }
+              ];
+              
+              // Mantener solo últimos 30 puntos
+              return newData.length > MAX_REALTIME_POINTS 
+                ? newData.slice(newData.length - MAX_REALTIME_POINTS)
+                : newData;
+            });
+          }
+        } catch (e) {
+          console.error('Error parsing WebSocket message:', e);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        setWsStatus('disconnected');
+      };
+
+      socket.onclose = (e) => {
+        console.log('🔌 WebSocket cerrado. Código:', e.code);
+        ws.current = null;
+        setWsStatus('disconnected');
+        
+        // Reintentar conexión (máximo 3 veces)
+        if (e.code !== 1000 && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttemptsRef.current++;
+          const delay = 1000 * reconnectAttemptsRef.current;
+          
+          console.log(`⏳ Reintentando en ${delay}ms (intento ${reconnectAttemptsRef.current})`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectWebSocket();
+          }, delay);
+        } else {
+          // Reset gráfica si falló definitivamente
+          setRealtimeData([{ value: 0, label: '', frontColor: '#FF4500' }]);
+        }
+      };
+
+      ws.current = socket;
+    };
+
+    const disconnect = () => {
+      if (ws.current) {
+        ws.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+    };
+
+    disconnect();
+    if (deviceId) {
+      connectWebSocket();
+    }
+
+    return () => disconnect();
+  }, [token, deviceId]);
+
+  return (
+    <ScrollView>
+      {/* Badge EN VIVO pulsante */}
+      <View style={styles.liveSection}>
+        <LivePulseBadge status={wsStatus} />
+        
+        <View style={styles.wattsContainer}>
+          {wsStatus === 'connecting' ? (
+            <ActivityIndicator size="large" color="#00FF7F" />
+          ) : (
+            <>
+              <Text style={styles.wattsNumber}>
+                {currentWatts !== null ? currentWatts.toFixed(0) : '---'}
+              </Text>
+              <Text style={styles.wattsUnit}>WATTS</Text>
+            </>
+          )}
+        </View>
+
+        {/* Gráfica en tiempo real */}
+        <LineChart
+          areaChart
+          curved
+          data={realtimeData}
+          height={120}
+          width={screenWidth - 60}
+          color="#FF4500"
+          startFillColor="#FF4500"
+          endFillColor="#FF4500"
+          startOpacity={0.4}
+          endOpacity={0.0}
+          hideRules
+          hideYAxisText
+          hideDataPoints
+          hideAxesAndRules
+        />
+      </View>
+
+      {/* Resto de gráficas históricas */}
+      {/* ... */}
+    </ScrollView>
+  );
+};
+Componente LivePulseBadge:
+typescriptconst LivePulseBadge = ({ status }: { status: string }) => {
+  const opacity = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    if (status === 'connected') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      opacity.setValue(1);
+    }
+  }, [status]);
+
+  const getConfig = () => {
+    if (status === 'connected') return { color: '#FF4500', text: 'EN VIVO', icon: 'circle' };
+    if (status === 'connecting') return { color: '#FFA500', text: 'CONECTANDO', icon: 'sync' };
+    return { color: '#666', text: 'OFFLINE', icon: 'times-circle' };
+  };
+
+  const config = getConfig();
+
+  return (
+    <View style={styles.badge}>
+      <Animated.View style={{ 
+        width: 8, 
+        height: 8, 
+        borderRadius: 4, 
+        backgroundColor: config.color,
+        opacity: status === 'connected' ? opacity : 1,
+      }} />
+      <Text style={{ color: config.color }}>{config.text}</Text>
+    </View>
+  );
+};
+Generación de reporte PDF:
+typescriptconst handleGenerateReport = async () => {
+  if (!token) return;
+  
+  // Solicitar permisos de almacenamiento
+  if (!(await requestStoragePermission())) return;
+  
+  setIsGeneratingReport(true);
+  
+  try {
+    // Determinar si es mes actual o histórico
+    const isCurrent = selectedMonthlyDate.getMonth() === new Date().getMonth();
+    
+    const reportData = isCurrent 
+      ? await getCurrentMonthlyReport(token)
+      : await getMonthlyReport(token, selectedMonthlyDate.getMonth() + 1, selectedMonthlyDate.getFullYear());
+    
+    // Generar PDF
+    const result = await generateEcoWattReport(reportData);
+    
+    Alert.alert(
+      result.success ? "¡Listo!" : "Error",
+      result.success ? "PDF generado correctamente." : "No se pudo crear el PDF."
+    );
+  } catch (e) {
+    Alert.alert("Aviso", "Sin datos suficientes para generar reporte.");
+  } finally {
+    setIsGeneratingReport(false);
+  }
+};
+8.4 AddDeviceScreen
+Archivo: src/screens/AddDeviceScreen.tsx
+Propósito: Configurar y registrar dispositivos Shelly.
+Proceso completo (6 fases):
+FASE 1: Configuración WiFi
+─────────────────────────
+├─ Verificar credenciales guardadas
+├─ Si no existen → Mostrar modal
+└─ Guardar SSID + Password en useAuthStore
+
+FASE 2: Escaneo de Redes
+─────────────────────────
+├─ Solicitar permisos (ubicación + WiFi)
+├─ WifiManager.loadWifiList()
+├─ Filtrar redes "shelly*"
+└─ Mostrar lista al usuario
+
+FASE 3: Conexión al Shelly
+─────────────────────────
+├─ WifiManager.connectToProtectedSSID(ssid, '', false, false)
+├─ Polling de verificación (10 intentos)
+├─ getCurrentWifiSSID() == targetSSID
+└─ Timeout si falla
+
+FASE 4: Configuración RPC
+─────────────────────────
+├─ A) Identificar dispositivo
+│  ├─ POST /rpc/Sys.GetStatus → Extraer MAC
+│  └─ GET /rpc/Shelly.GetDeviceInfo → Backup
+│
+├─ B) Configurar MQTT
+│  └─ POST /rpc/Mqtt.SetConfig
+│     {
+│       enable: true,
+│       server: "134.209.61.74:1883",
+│       client_id: "shellyplus1pm-aabbccdd" (minúsculas),
+│       topic_prefix: "shellyplus1pm-aabbccdd",
+│       rpc_ntf: true,
+│       status_ntf: true
+│     }
+│
+├─ C) Instalar Script de Monitoreo
+│  ├─ POST /rpc/Script.Create { name: "ecowatt_ingest" }
+│  ├─ POST /rpc/Script.PutCode { id, code }
+│  ├─ POST /rpc/Script.SetConfig { id, enable: true }
+│  └─ POST /rpc/Script.Start { id }
+│
+├─ D) Configurar WiFi del Hogar
+│  └─ POST /rpc/WiFi.SetConfig
+│     {
+│       sta: {
+│         ssid: "TuWiFi",
+│         pass: "TuPassword",
+│         enable: true
+│       }
+│     }
+│
+└─ E) Reiniciar
+   └─ POST /rpc/Shelly.Reboot
+
+FASE 5: Registro en Backend
+─────────────────────────
+├─ Esperar 8 segundos (reinicio)
+├─ Reconectar móvil a WiFi del hogar
+├─ POST /api/v1/devices/
+│  {
+│    dev_hardware_id: "AABBCCDD" (MAYÚSCULAS),
+│    dev_name: "Shelly Plus 1PM",
+│    dev_mqtt_prefix: "shellyplus1pm"
+│  }
+└─ Forzar apagado inicial (seguridad)
+   └─ POST /api/v1/control/{id}/set { state: false }
+
+FASE 6: Éxito
+─────────────────────────
+└─ Pantalla de confirmación + Botón "Finalizar"tate().addNotification({
   title: 'Alerta de Consumo
+Código de configuración MQTT:
+typescriptawait fetchWithTimeout(`http://192.168.33.1/rpc/Mqtt.SetConfig`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    config: {
+      enable: true,
+      server: '134.209.61.74:1883',
+      user: 'ecowatt_shelly',
+      pass: 'SjTqQh4htnRK7rqN8tsOmSgFY',
+      client_id: `${mqttPrefix}-${finalMac.toLowerCase()}`, // ¡CRÍTICO: minúsculas!
+      topic_prefix: `${mqttPrefix}-${finalMac.toLowerCase()}`,
+      rpc_ntf: true,
+      status_ntf: true,
+      enable_rpc: true,
+      enable_control: true
+    }
+  })
+}, 10000);
+Código del script de ingestión:
+typescriptconst monitoringScript = `
+let CONFIG = {
+    webhook_url: "${INGESTION_URL}",
+    interval: 10000 
+};
+
+function publishData() {
+    Shelly.call("Switch.GetStatus", {id: 0}, function(result) {
+        if (!result) return;
+        
+        let payload = {
+            "switch:0": {
+                id: 0,
+                apower: result.apower || 0,
+                voltage: result.voltage || 0,
+                current: result.current || 0,
+                output: result.output || false,
+                temperature: result.temperature || {tC: 0, tF: 0}
+            },
+            "sys": {
+                mac: "${finalMac}" // MAYÚSCULAS para BD
+            }
+        };
+        
+        Shelly.call("HTTP.POST", {
+            url: CONFIG.webhook_url,
+            body: JSON.stringify(payload),
+            content_type: "application/json"
+        }, function(res) {
+            // Callback opcional
+        });
+    });
+}
+
+Timer.set(CONFIG.interval, true, publishData);
+publishData();
+`;
+
+// Método seguro: PutCode (mejor que Script.Create con code inline)
+const createRes = await fetchWithTimeout(`http://192.168.33.1/rpc/Script.Create`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: "ecowatt_ingest" })
+}, 5000);
+
+const scriptId = createRes.id || 1;
+
+await fetchWithTimeout(`http://192.168.33.1/rpc/Script.PutCode`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    id: scriptId, 
+    code: monitoringScript 
+  })
+}, 8000);
+⚠️ Puntos críticos:
+
+MAC en minúsculas para MQTT, mayúsculas para BD
+PutCode es más robusto que Create con code inline
+Timeout de 8s después de reboot antes de llamar API
+fetchWithTimeout previene cuelgues indefinidos
+
+8.5 ProfileScreen
+Archivo: src/screens/ProfileScreen.tsx
+Propósito: Gestión de perfil y control de dispositivos.
+Estructura visual:
+┌─────────────────────────────┐
+│          [Editar]           │
+│      👤 Juan Pérez          │
+│   juan@ejemplo.com          │
+├─────────────────────────────┤
+│ ⚡ Tarifa CFE: 1F           │
+│ 📅 Día de Corte: 15         │
+├─────────────────────────────┤
+│   MIS DISPOSITIVOS (2)      │
+├─────────────────────────────┤
+│ 🔌 Shelly Sala    [ON] 🔘  │
+│    AABBCCDDEE01             │
+│    ENCENDIDO          🗑️    │
+├─────────────────────────────┤
+│ 🔌 Shelly Cocina  [OFF] ⚪  │
+│    AABBCCDDEE02             │
+│    APAGADO            🗑️    │
+├─────────────────────────────┤
+│  [+ Añadir Dispositivo]     │
+├─────────────────────────────┤
+│     [Cerrar Sesión]         │
+└─────────────────────────────┘
+Lógica de control con optimistic update:
+typescriptconst ProfileScreen = ({ navigation }) => {
+  const { token, logout } = useAuthStore();
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [togglingDeviceId, setTogglingDeviceId] = useState<number | null>(null);
+
+  // Cargar dispositivos + sincronizar estado real
+  const loadData = useCallback(async () => {
+    const devicesData = await getDevices(token);
+    
+    // 🔥 SINCRONIZACIÓN: Verificar estado real en Shelly
+    const devicesWithRealStatus = await Promise.all(
+      devicesData.map(async (device) => {
+        try {
+          const status = await getDeviceStatus(token, device.dev_id);
+          const realState = status.status?.output ?? device.dev_status;
+          return { ...device, dev_status: realState };
+        } catch (e) {
+          console.log(`⚠️ No se pudo verificar ${device.dev_name}`);
+          return device; // Usar estado de BD
+        }
+      })
+    );
+    
+    setDevices(devicesWithRealStatus);
+  }, [token]);
+
+  // Manejar switch ON/OFF
+  const handleToggleDevice = async (device: Device) => {
+    if (!token) return;
+
+    const targetState = !device.dev_status;
+    const deviceId = device.dev_id;
+
+    // 1. Bloquear switch
+    setTogglingDeviceId(deviceId);
+
+    // 2. Optimistic Update (cambiar UI inmediatamente)
+    setDevices(prevDevices => 
+      prevDevices.map(d => 
+        d.dev_id === deviceId ? { ...d, dev_status: targetState } : d
+      )
+    );
+
+    try {
+      console.log(`🔌 Enviando comando a ${device.dev_name}: ${targetState ? 'ON' : 'OFF'}`);
+      
+      // 3. Llamar API
+      await setDeviceState(token, deviceId, targetState);
+      
+      console.log('✅ Comando enviado exitosamente');
+
+      // ❌ NO sobreescribir con respuesta del servidor
+      // (puede estar desactualizada)
+
+    } catch (error: any) {
+      console.error('⚠️ Error al cambiar estado:', error);
+      
+      Alert.alert(
+        'Error de Conexión',
+        'No se pudo comunicar con el dispositivo. Verifica que esté enchufado.'
+      );
+      
+      // 4. Rollback: Revertir UI
+      setDevices(prevDevices => 
+        prevDevices.map(d => 
+          d.dev_id === deviceId ? { ...d, dev_status: !targetState } : d
+        )
+      );
+      
+      // 5. Recargar estado real
+      await loadData();
+      
+    } finally {
+      // 6. Desbloquear switch
+      setTogglingDeviceId(null);
+    }
+  };
+
+  // Eliminar dispositivo
+  const handleDeleteDevice = (device: Device) => {
+    Alert.alert(
+      "Eliminar Dispositivo",
+      `¿Estás seguro de eliminar "${device.dev_name}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteDevice(token, device.dev_id);
+              setDevices(prev => prev.filter(d => d.dev_id !== device.dev_id));
+              Alert.alert("Éxito", "Dispositivo eliminado correctamente.");
+            } catch (err) {
+              Alert.alert("Error", "No se pudo eliminar el dispositivo.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  return (
+    <FlatList
+      data={devices}
+      renderItem={({ item }) => (
+        <View style={styles.deviceRow}>
+          {/* Icono con color según estado */}
+          <Icon 
+            name="microchip" 
+            size={24} 
+            color={item.dev_status ? '#00FF7F' : '#888'} 
+          />
+          
+          <View style={styles.deviceInfo}>
+            <Text style={styles.deviceName}>{item.dev_name}</Text>
+            <Text style={styles.deviceMac}>{item.dev_hardware_id}</Text>
+            <Text style={{ 
+              color: item.dev_status ? '#00FF7F' : '#888',
+              fontWeight: 'bold' 
+            }}>
+              {item.dev_status ? 'ENCENDIDO' : 'APAGADO'}
+            </Text>
+          </View>
+
+          {/* Botón eliminar */}
+          <TouchableOpacity 
+            onPress={() => handleDeleteDevice(item)}
+            disabled={togglingDeviceId === item.dev_id}
+          >
+            <Icon name="trash-alt" size={20} color="#FF6347" />
+          </TouchableOpacity>
+
+          {/* Switch */}
+          <Switch
+            trackColor={{ false: "#767577", true: "#00FF7F" }}
+            thumbColor={item.dev_status ? "#FFFFFF" : "#f4f3f4"}
+            onValueChange={() => handleToggleDevice(item)}
+            value={item.dev_status ?? false}
+            disabled={togglingDeviceId === item.dev_id}
+          />
+        </View>
+      )}
+      ListHeaderComponent={() => (
+        <>
+          {/* Header de perfil */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { currentUser: profile })}>
+              <Icon name="pencil-alt" size={20} color="#003366" />
+            </TouchableOpacity>
+            <Icon name="user-circle" size={80} color="#003366" />
+            <Text style={styles.userName}>{profile?.user_name}</Text>
+          </View>
+          
+          {/* Sección de dispositivos */}
+          <Text style={styles.sectionTitle}>
+            Mis Dispositivos {devices.length > 0 ? `(${devices.length})` : ''}
+          </Text>
+        </>
+      )}
+      ListFooterComponent={() => (
+        <>
+          {/* Botón añadir */}
+          <TouchableOpacity 
+            style={styles.addDeviceButton}
+            onPress={() => navigation.navigate('AddDevice')}
+          >
+            <Icon name="plus" size={18} color="#003366" />
+            <Text>Añadir Nuevo Dispositivo</Text>
+          </TouchableOpacity>
+
+          {/* Botón cerrar sesión */}
+          <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+            <Icon name="sign-out-alt" size={20} color="#FFF" />
+            <Text>Cerrar Sesión</Text>
+          </TouchableOpacity>
+        </>
+      )}
+      onRefresh={loadData}
+      refreshing={false}
+    />
+  );
+};
+Ventajas del optimistic update:
+
+✅ UI responde instantáneamente
+✅ Usuario no espera respuesta del servidor
+✅ Si falla, se revierte automáticamente
+✅ Si la luz se va, se sincroniza en próxima carga
+
+8.6 NotificationsScreen
+Archivo: src/screens/NotificationsScreen.tsx
+Propósito: Centro de notificaciones con historial persistente.
+Código completo:
+typescriptconst NotificationsScreen = ({ navigation }) => {
+  const { notifications, markAsRead, markAllAsRead, unreadCount, clearAll } = useNotificationStore();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => setIsLoading(false), 500);
+  }, []);
+
+  // Skeleton durante carga
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="arrow-left" size={20} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Notificaciones</Text>
+        </View>
+        
+        {[1, 2, 3, 4].map((i) => (
+          <View key={i} style={{ flexDirection: 'row', padding: 20 }}>
+            <SkeletonLoader width={40} height={40} borderRadius={20} />
+            <View style={{ flex: 1, marginLeft: 15 }}>
+              <SkeletonLoader width="60%" height={15} style={{ marginBottom: 8 }} />
+              <SkeletonLoader width="90%" height={12} />
+            </View>
+          </View>
+        ))}
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size={20} color="#FFF" />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>
+          Notificaciones {unreadCount > 0 ? `(${unreadCount})` : ''}
+        </Text>
+        
+        {notifications.length > 0 && (
+          <TouchableOpacity onPress={markAllAsRead}>
+            <Icon name="check-double" size={18} color="#00FF7F" />
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      {/* Lista */}
+      <FlatList
+        data={notifications}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity 
+            style={[
+              styles.item,
+              item.read ? styles.itemRead : styles.itemUnread
+            ]}
+            onPress={() => markAsRead(item.id)}
+          >
+            <View style={styles.iconBox}>
+              <Icon 
+                name="bell" 
+                size={18} 
+                color={item.read ? '#AAA' : '#00FF7F'}
+                solid={!item.read}
+              />
+            </View>
+            
+            <View style={styles.textContainer}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={[
+                  styles.title,
+                  !item.read && { color: '#000', fontWeight: 'bold' }
+                ]}>
+                  {item.title}
+                </Text>
+                {!item.read && <View style={styles.dot} />}
+              </View>
+              
+              <Text style={styles.body} numberOfLines={2}>{item.body}</Text>
+              <Text style={styles.date}>{formatDate(item.date)}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Icon name="bell-slash" size={60} color="#DDD" />
+            <Text style={styles.emptyText}>Estás al día</Text>
+            <Text style={{ color: '#999' }}>No tienes notificaciones nuevas.</Text>
+          </View>
+        )}
+      />
+      
+      {/* Footer */}
+      {notifications.length > 0 && (
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={clearAll}>
+            <Text style={styles.clearAllText}>Borrar todas</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+};
+
+const formatDate = (isoDateString: string) => {
+  const date = new Date(isoDateString);
+  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })}`;
+};
+Características:
+
+✅ Badge de punto verde en no leídas
+✅ Opacidad reducida en leídas
+✅ Icono de campana sólida/outline
+✅ Timestamp formateado
+✅ Empty state elegante
+
+
+9. Servicios
+9.1 authService.ts
+Archivo: src/services/authService.ts
+9.1.1 Manejo de Errores Centralizado
+typescriptconst handleApiError = async (response: Response) => {
+  if (response.status === 401) {
+    throw new Error(`Unauthorized ${response.status}`);
+  }
+  
+  const data = await response.json();
+  let errorMessage = 'Ocurrió un error inesperado.';
+
+  if (data.detail) {
+    if (Array.isArray(data.detail) && data.detail[0]?.msg) {
+      errorMessage = data.detail[0].msg;
+    } else if (typeof data.detail === 'string') {
+      errorMessage = data.detail;
+    }
+  }
+  
+  throw new Error(errorMessage);
+};
+Beneficios:
+
+Manejo consistente de errores FastAPI
+Mensajes amigables al usuario
+Lanza excepciones tipadas
+
+9.1.2 Wrapper con Auto-Refresh
+typescriptasync function fetchWithRefresh(endpoint: string, options: RequestInit): Promise<Response> {
+  const store = useAuthStore.getState();
+
+  // Primer intento
+  let response = await fetch(endpoint, options);
+
+  // Si token expiró (401) y tenemos refresh token
+  if (response.status === 401 && store.refreshToken) {
+    console.log('⚠️ Access Token expirado. Renovando...');
+    
+    try {
+      // Renovar tokens
+      const newTokens = await refreshAccessToken(store.refreshToken);
+      store.login(newTokens.access_token, newTokens.refresh_token);
+
+      // Actualizar header
+      const newHeaders = {
+        ...options.headers,
+        'Authorization': `Bearer ${newTokens.access_token}`,
+      };
+      
+      console.log('✅ Token renovado. Reintentando...');
+      
+      // Reintentar llamada
+      response = await fetch(endpoint, { ...options, headers: newHeaders });
+
+    } catch (error) {
+      console.error('❌ Falló el refresco. Cerrando sesión.');
+      store.logout();
+      throw new Error('Sesión expirada. Por favor, inicia sesión de nuevo.');
+    }
+  }
+  
+  return response;
+}
+Flujo visual:
+┌─────────────────────┐
+│  fetch(endpoint)    │
+└──────────┬──────────┘
+           │
+           ▼
+   ┌───────────────┐
+   │ Status 401?   │
+   └───┬───────┬───┘
+       │ No    │ Sí
+       │       ▼
+       │  ┌────────────────┐
+       │  │ refreshToken   │
+       │  │ disponible?    │
+       │  └────┬───────┬───┘
+       │  No   │       │ Sí
+       │       │       ▼
+       │       │  ┌─────────────────┐
+       │       │  │ refreshAccess   │
+       │       │  │ Token()         │
+       │       │  └────────┬────────┘
+       │       │           │
+       │       │           ▼
+       │       │  ┌─────────────────┐
+       │       │  │ store.login()   │
+       │       │  └────────┬────────┘
+       │       │           │
+       │       │           ▼
+       │       │  ┌─────────────────┐
+       │       │  │ Reintentar con  │
+       │       │  │ nuevo token     │
+       │       │  └────────┬────────┘
+       │       │           │
+       ▼       ▼           ▼
+   ┌─────────────────────────┐
+   │  Retornar response      │
+   └─────────────────────────┘
+9.1.3 Endpoints Principales
+Registro:
+typescriptexport const registerUser = async (userData: UserRegistrationData) => {
+  const response = await fetch(`${API_BASE_URL}/api/v1/users/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData),
+  });
+  
+  if (!response.ok) await handleApiError(response);
+  return await response.json();
+};
+Login:
+typescriptexport const loginUser = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  
+  if (!response.ok) await handleApiError(response);
+  return await response.json() as LoginResponse;
+};
+Perfil:
+typescriptexport const getUserProfile = async (token: string): Promise<UserProfile> => {
+  const endpoint = `${API_BASE_URL}/api/v1/users/me`;
+  const response = await fetchWithRefresh(endpoint, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  
+  if (!response.ok) await handleApiError(response);
+  return await response.json();
+};
+Dashboard:
+typescriptexport const getDashboardSummary = async (token: string): Promise<DashboardSummary> => {
+  const endpoint = `${API_BASE_URL}/api/v1/dashboard/summary`;
+  const response = await fetchWithRefresh(endpoint, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  
+  if (!response.ok) await handleApiError(response);
+  return await response.json();
+};
+Control de Dispositivos:
+typescriptexport const setDeviceState = async (
+  token: string, 
+  deviceId: number, 
+  state: boolean
+): Promise<ControlResponse> => {
+  const endpoint = `${API_BASE_URL}/api/v1/control/${deviceId}/set`;
+  
+  const response = await fetchWithRefresh(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ state }),
+  });
+
+  if (!response.ok) await handleApiError(response);
+  return await response.json();
+};
+9.2 notificationService.ts
+Archivo: src/services/notificationService.ts
+Propósito: Gestión completa de Firebase Cloud Messaging.
+9.2.1 Flujo de Inicialización
+┌──────────────────────────────┐
+│ 1. requestNotificationPerm() │
+└────────────┬─────────────────┘
+             │
+             ▼
+┌──────────────────────────────┐
+│ 2. getFCMToken()             │
+└────────────┬─────────────────┘
+             │
+             ▼
+┌──────────────────────────────┐
+│ 3. registerFCMToken()        │
+│    → POST /api/v1/fcm/reg    │
+└────────────┬─────────────────┘
+             │
+             ▼
+┌──────────────────────────────┐
+│ 4. setupListeners()          │
+│    → onMessage()             │
+│    → onNotificationOpened()  │
+│    → getInitialNotification()│
+└──────────────────────────────┘
+9.2.2 Solicitar Permisos
+typescriptexport async function requestNotificationPermission() {
+  try {
+    // Android 13+ requiere permiso runtime
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+      );
+      
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('❌ Permiso de Android 13+ denegado');
+        return false;
+      }
+    }
+
+    // Permiso de Firebase
+    const authStatus = await messaging().requestPermission();
+    const enabled =
+      authStatus === messaging().AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging().AuthorizationStatus.PROVISIONAL;
+
+    if (enabled) {
+      console.log('✅ Permisos de notificaciones concedidos');
+      return true;
+    } else {
+      console.log('⚠️ Permisos denegados');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error pidiendo permisos:', error);
+    return false;
+  }
+}
+9.2.3 Obtener Token FCM
+typescriptexport async function getFCMToken() {
+  try {
+    // iOS requiere registro explícito
+    if (Platform.OS === 'ios') {
+      await messaging().registerDeviceForRemoteMessages();
+    }
+
+    const token = await messaging().getToken();
+    console.log('📱 FCM Token obtenido:', token.substring(0, 20) + '...');
+    return token;
+  } catch (error) {
+    console.error('❌ Error obteniendo token:', error);
+    return null;
+  }
+}
+9.2.4 Registrar en Backend
+typescriptexport async function registerFCMToken(accessToken: string) {
+  try {
+    const fcmToken = await getFCMToken();
+    if (!fcmToken) return false;
+
+    const deviceName = await DeviceInfo.getDeviceName();
+    const platform = Platform.OS;
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/fcm/register`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fcm_token: fcmToken,
+        device_name: deviceName,
+        platform: platform
+      }),
+    });
+
+    if (response.ok) {
+      console.log('✅ Token FCM registrado en backend');
+      return true;
+    } else {
+      console.warn('⚠️ Error al registrar token');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error de red:', error);
+    return false;
+  }
+}
+9.2.5 Configurar Listeners
+typescriptexport function setupNotificationListeners() {
+  const addNotification = useNotificationStore.getState().addNotification;
+  
+  const handleNotification = (remoteMessage: any) => {
+    if (remoteMessage?.notification) {
+      addNotification({
+        title: remoteMessage.notification.title || 'Notificación EcoWatt',
+        body: remoteMessage.notification.body || 'Revisa tus alertas.',
+      });
+      console.log('🔔 Notificación guardada:', remoteMessage.notification.title);
+    }
+  };
+  
+  // FOREGROUND: App abierta
+  const unsubscribe = messaging().onMessage(async remoteMessage => {
+    console.log('🔔 Notificación recibida (foreground)');
+    handleNotification(remoteMessage);
+  });
+
+  // BACKGROUND: Usuario abre app desde notificación
+  messaging().onNotificationOpenedApp(remoteMessage => {
+    console.log('🔔 App abierta desde background');
+    handleNotification(remoteMessage);
+  });
+
+  // QUIT STATE: App iniciada por notificación
+  messaging()
+    .getInitialNotification()
+    .then(remoteMessage => {
+      if (remoteMessage) {
+        console.log('🔔 App iniciada por notificación');
+        handleNotification(remoteMessage);
+      }
+    });
+
+  return unsubscribe;
+}
+9.2.6 Función de Inicialización Completa
+typescriptexport async function initializeNotificationService(accessToken: string) {
+  try {
+    // 1. Permisos
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) return false;
+
+    // 2. Registrar token
+    const registered = await registerFCMToken(accessToken);
+    if (!registered) return false;
+
+    // 3. Configurar listeners
+    setupNotificationListeners();
+
+    console.log('✅ Sistema de notificaciones inicializado');
+    return true;
+  } catch (error) {
+    console.error('❌ Error en inicialización:', error);
+    return false;
+  }
+}
+Uso en la app:
+typescript// En useAuthStore.ts - Al hacer login
+login: (accessToken, refreshToken) => {
+  set({
+    isAuthenticated: true,
+    token: accessToken,
+    refreshToken,
+  });
+  
+  // Inicializar notificaciones
+  initializeNotificationService(accessToken);
+},
+
+// Al restaurar sesión desde AsyncStorage
+onRehydrateStorage: () => (state) => {
+  if (state?.isAuthenticated && state?.token) {
+    console.log('Restaurando notificaciones...');
+    initializeNotificationService(state.token);
+  }
+},
+9.3 reportService.ts
+Archivo: src/services/reportService.ts
+Propósito: Obtener datos para reportes mensuales.
+
+9.3.1 Reporte Histórico (Meses Pasados)
+typescriptexport const getMonthlyReport = async (
+  token: string, 
+  month: number, // 1-12
+  year: number
+): Promise<MonthlyReportData> => {
+  const response = await fetch(`${API_BASE_URL}/api/v1/reports/monthly`, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json', 
+      'Authorization': `Bearer ${token}` 
+    },
+    body: JSON.stringify({ month, year }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: No se pudo obtener el reporte.`);
+  }
+  
+  return await response.json() as MonthlyReportData;
+};
+9.3.2 Reporte del Mes Actual (Tiempo Real)
+typescriptexport const getCurrentMonthlyReport = async (token: string): Promise<MonthlyReportData> => {
+  const response = await fetch(`${API_BASE_URL}/api/v1/reports/monthly/current`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: No se pudo obtener el reporte actual.`);
+  }
+  
+  return await response.json() as MonthlyReportData;
+};
+Diferencia clave:
+
+Histórico usa POST con mes/año específico → Lee de PostgreSQL
+Actual usa GET → Lee de Redis (datos en tiempo real)
+
+9.4 PDFGenerator.tsx
+Archivo: src/services/PDFGenerator.tsx
+Propósito: Generar reportes PDF con datos de consumo y costos CFE.
+9.4.1 Estructura del Reporte
+typescriptinterface MonthlyReportData {
+  header: {
+    period_month: string;
+    user_name: string;
+    user_email: string;
+    billing_cycle_start: string;
+    billing_cycle_end: string;
+  };
+  executive_summary: {
+    total_estimated_cost_mxn: number;
+    total_kwh_consumed: number;
+  };
+  cost_breakdown: {
+    applied_tariff: string;
+    tariff_levels: TariffLevel[];
+    fixed_charge_mxn: number;
+    total_cost_mxn: number;
+  };
+  consumption_details: {
+    daily_consumption: DailyConsumptionPoint[];
+    average_daily_consumption: number;
+    highest_consumption_day: DailyConsumptionPoint;
+    lowest_consumption_day: DailyConsumptionPoint;
+  };
+  alerts: Alert[];
+  recommendations: string[];
+}
+9.4.2 Análisis de Ahorro
+typescriptconst calculateSavingsData = (data: MonthlyReportData) => {
+  // Buscar consumo en tarifa "Excedente"
+  const excedenteLevel = data.cost_breakdown.tariff_levels.find(
+    (l: TariffLevel) => l.level_name.includes("Excedente")
+  );
+
+  if (!excedenteLevel || excedenteLevel.kwh_consumed === 0) {
+    return { 
+      hasSavings: false, 
+      amount: 0,
+      title: "✅ Consumo Eficiente",
+      message: "Tu consumo se mantiene dentro de los rangos óptimos. ¡Sigue así!" 
+    };
+  }
+
+  return {
+    hasSavings: true,
+    amount: excedenteLevel.subtotal_mxn,
+    title: "💰 Oportunidad de Ahorro",
+    message: `El consumo en tarifa Excedente representó <strong>${excedenteLevel.subtotal_mxn.toFixed(2)}</strong> extra. ¡Intenta reducirlo!`
+  };
+};
+9.4.3 Template HTML del PDF
+typescriptconst getReportHtml = (data: MonthlyReportData): string => {
+  const savings = calculateSavingsData(data);
+  const generatedDate = new Date().toLocaleDateString('es-MX', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
+  // Generar filas de tarifas
+  const tariffRows = data.cost_breakdown.tariff_levels.map((level) => {
+    const isExcedente = level.level_name.includes("Excedente");
+    const cleanName = level.level_name.replace(/\*\*/g, '');
+    
+    return `
+      <tr class="${isExcedente ? 'excedente-row' : ''}">
+        <td>${cleanName}</td>
+        <td style="text-align: right;">${level.kwh_consumed.toFixed(2)}</td>
+        <td style="text-align: right;">${level.price_per_kwh.toFixed(2)}</td>
+        <td style="text-align: right; font-weight: bold;">${level.subtotal_mxn.toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Generar lista de alertas
+  const alertList = data.alerts && data.alerts.length > 0 
+    ? data.alerts.map(a => `
+        <li class="alert-item">
+          <strong>${a.title}:</strong> ${a.body}
+        </li>
+      `).join('')
+    : '<li class="alert-item" style="background-color: #d1e7dd; color: #0f5132;">✅ Sin incidencias.</li>';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { 
+          font-family: Helvetica, Arial, sans-serif; 
+          color: #333; 
+          padding: 0; 
+          margin: 0; 
+        }
+        
+        .header { 
+          background-color: #008060; 
+          color: white; 
+          padding: 30px 20px; 
+          text-align: center; 
+          border-bottom: 5px solid #00FF7F; 
+        }
+        
+        h1 { 
+          margin: 0; 
+          font-size: 24px; 
+          text-transform: uppercase; 
+          letter-spacing: 1px; 
+        }
+        
+        .container { 
+          padding: 25px; 
+          max-width: 800px; 
+          margin: 0 auto; 
+        }
+        
+        h2 { 
+          color: #008060; 
+          border-left: 5px solid #00FF7F; 
+          padding-left: 10px; 
+          margin-top: 25px; 
+          font-size: 18px; 
+        }
+        
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-top: 15px; 
+          font-size: 13px; 
+        }
+        
+        th { 
+          background-color: #f0f2f5; 
+          padding: 12px; 
+          text-align: left; 
+          border-bottom: 2px solid #ddd; 
+        }
+        
+        td { 
+          border-bottom: 1px solid #eee; 
+          padding: 10px; 
+        }
+        
+        .excedente-row td { 
+          background-color: #fff5f5; 
+          color: #c53030; 
+          font-weight: bold; 
+        }
+        
+        .total-row td { 
+          font-weight: bold; 
+          background-color: #f9f9f9; 
+        }
+        
+        .total-final { 
+          background-color: #d1e7dd; 
+          color: #0f5132; 
+          font-size: 16px; 
+          border-top: 2px solid #008060; 
+        }
+        
+        .total-final td { 
+          padding: 15px 10px; 
+          font-weight: 800; 
+        }
+        
+        .summary-box { 
+          background: #f8f9fa; 
+          padding: 20px; 
+          border-radius: 8px; 
+          margin-bottom: 20px; 
+          border: 1px solid #ddd; 
+          text-align: center; 
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+        }
+        
+        .big-num { 
+          font-size: 28px; 
+          font-weight: bold; 
+          color: #dc3545; 
+          display: block; 
+          margin-top: 5px; 
+        }
+        
+        .savings-box { 
+          background-color: ${savings.hasSavings ? '#e6ffed' : '#f0f9ff'}; 
+          border: 1px solid ${savings.hasSavings ? '#28a745' : '#bde0fe'}; 
+          padding: 20px; 
+          border-radius: 8px; 
+          margin-top: 15px; 
+        }
+        
+        .savings-amount { 
+          color: #dc3545; 
+          font-size: 32px; 
+          font-weight: bold; 
+          display: block; 
+          margin: 10px 0; 
+        }
+        
+        .alert-item { 
+          background-color: #fff3cd; 
+          padding: 10px; 
+          margin-bottom: 5px; 
+          border-radius: 4px; 
+          font-size: 12px; 
+          list-style: none; 
+          border-left: 3px solid #ffc107; 
+        }
+        
+        .footer { 
+          text-align: center; 
+          font-size: 10px; 
+          color: #999; 
+          margin-top: 50px; 
+          border-top: 1px solid #eee; 
+          padding-top: 15px; 
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <h1>Estado de Cuenta</h1>
+        <p style="margin: 5px 0; opacity: 0.9;">${data.header.period_month}</p>
+        <p style="font-size: 14px;">${data.header.user_name}</p>
+        <p style="font-size: 10px; margin-top:0;">${data.header.user_email}</p>
+      </div>
+      
+      <!-- Contenido -->
+      <div class="container">
+        <!-- Resumen Ejecutivo -->
+        <div class="summary-box">
+          <span style="font-size: 12px; text-transform: uppercase; color: #666;">
+            Total Estimado a Pagar
+          </span>
+          <span class="big-num">
+            ${data.executive_summary.total_estimated_cost_mxn.toFixed(2)} MXN
+          </span>
+          <span style="font-size: 10px; color: #999;">
+            Periodo: ${data.header.billing_cycle_start} - ${data.header.billing_cycle_end}
+          </span>
+        </div>
+        
+        <!-- Desglose de Costos -->
+        <h2>Desglose de Costos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Concepto</th>
+              <th style="text-align: right">Consumo (kWh)</th>
+              <th style="text-align: right">Precio</th>
+              <th style="text-align: right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tariffRows}
+            <tr class="total-row">
+              <td colspan="3" style="text-align: right;">Cargo Fijo</td>
+              <td style="text-align: right;">${data.cost_breakdown.fixed_charge_mxn.toFixed(2)}</td>
+            </tr>
+            <tr class="total-final">
+              <td colspan="3" style="text-align: right;">TOTAL ESTIMADO</td>
+              <td style="text-align: right;">${data.cost_breakdown.total_cost_mxn.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- Análisis de Ahorro -->
+        <h2>Análisis de Ahorro</h2>
+        <div class="savings-box">
+          <strong style="color: #008060; font-size: 16px;">${savings.title}</strong>
+          ${savings.hasSavings ? `<span class="savings-amount">${savings.amount.toFixed(2)} MXN</span>` : '<br><br>'}
+          <p style="margin: 0; color: #155724;">${savings.message}</p>
+        </div>
+        
+        <!-- Alertas -->
+        <h2>Alertas y Avisos</h2>
+        <ul style="padding: 0;">
+          ${alertList}
+        </ul>
+        
+        <!-- Footer -->
+        <div class="footer">
+          Generado el ${generatedDate}<br>
+          Documento informativo generado por EcoWatt, no oficial ante CFE.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+9.4.4 Función de Generación
+typescriptexport const generateEcoWattReport = async (reportData: MonthlyReportData): Promise<PDFResult> => {
+  try {
+    console.log("📄 Iniciando generación de PDF...");
+    
+    const htmlContent = getReportHtml(reportData);
+    const jobName = `EcoWatt_Reporte_${new Date().toISOString().substring(0, 10)}`;
+
+    // react-native-print abre interfaz nativa del SO
+    await RNPrint.print({
+      html: htmlContent,
+      jobName: jobName
+    });
+
+    // Android: Usuario selecciona "Guardar como PDF" desde el diálogo
+    // iOS: Muestra selector de impresora o AirDrop
+    
+    console.log("✅ PDF generado exitosamente");
+    return { success: true, path: 'Guardado por el usuario' };
+
+  } catch (error: any) {
+    console.error("❌ Error en generación:", error);
+    return { 
+      success: false, 
+      path: '', 
+      error: error.message || 'Error al generar PDF' 
+    };
+  }
+};
+Nota importante para Android:
+El usuario debe seleccionar manualmente "Guardar como PDF" desde el selector de impresoras. La app no controla la ruta final del archivo por limitaciones de la API.
+
+10. Estilos y Diseño
+10.1 Sistema de Colores
+Paleta principal:
+typescript// Colores primarios
+const COLOR_PRIMARY_BLUE = '#003366';    // Azul oscuro corporativo
+const COLOR_PRIMARY_GREEN = '#00FF7F';   // Verde neón (acción)
+const COLOR_ACCENT_GREEN = 'rgba(0, 255, 127, 0.15)'; // Verde transparente
+
+// Colores de estado
+const COLOR_SUCCESS = '#28a745';         // Verde éxito
+const COLOR_ERROR = '#E74C3C';           // Rojo error
+const COLOR_WARNING = '#FFA500';         // Naranja advertencia
+const COLOR_INFO = '#3498db';            // Azul info
+
+// Grises y neutros
+const COLOR_BACKGROUND_DARK = '#0A192F'; // Fondo oscuro
+const COLOR_CARD_BG = 'rgba(20, 20, 30, 0.75)'; // Tarjetas con glassmorphism
+const COLOR_TEXT_LIGHT = '#FFFFFF';      // Texto claro
+const COLOR_TEXT_DARK = '#333333';       // Texto oscuro
+const COLOR_TEXT_MUTED = '#888888';      // Texto secundario
+
+// Colores especiales
+const LIVE_COLOR = '#FF4500';            // Naranja para datos en vivo
+const BORDER_COLOR = 'rgba(255, 255, 255, 0.1)'; // Bordes sutiles
+Uso en componentes:
+typescript// Tarjeta con fondo semitransparente
+<View style={{
+  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  borderRadius: 15,
+  padding: 20,
+}}>
+  <Text style={{ color: '#FFFFFF' }}>Contenido</Text>
+</View>
+
+// Botón con sombra de neón
+<TouchableOpacity style={{
+  backgroundColor: '#00FF7F',
+  paddingVertical: 15,
+  borderRadius: 10,
+  shadowColor: '#00FF7F',
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.8,
+  shadowRadius: 15,
+  elevation: 10,
+}}>
+  <Text style={{ color: '#003366', fontWeight: 'bold' }}>Acción</Text>
+</TouchableOpacity>
+10.2 Tipografía
+Jerarquía de texto:
+typescriptconst typography = StyleSheet.create({
+  h1: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  h2: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  h3: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  body: {
+    fontSize: 16,
+    color: '#E0E0E0',
+    lineHeight: 24,
+  },
+  bodySmall: {
+    fontSize: 14,
+    color: '#B0B0B0',
+    lineHeight: 20,
+  },
+  caption: {
+    fontSize: 12,
+    color: '#888888',
+    lineHeight: 18,
+  },
+  button: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+});
+10.3 Espaciado y Layout
+Sistema de spacing:
+typescriptconst spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
+
+// Uso
+<View style={{ 
+  padding: spacing.lg,
+  marginBottom: spacing.md,
+}}>
+Grid system:
+typescript// Tarjetas en 2 columnas
+<View style={{
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 20,
+}}>
+  <View style={{ width: '48%' }}>
+    {/* Tarjeta 1 */}
+  </View>
+  <View style={{ width: '48%' }}>
+    {/* Tarjeta 2 */}
+  </View>
+</View>
+10.4 Componentes de UI Comunes
+Tarjeta con glassmorphism:
+typescriptconst glassCard = {
+  backgroundColor: 'rgba(20, 20, 30, 0.75)',
+  borderRadius: 24,
+  padding: 20,
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.1)',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.3,
+  shadowRadius: 10,
+  elevation: 5,
+};
+Badge de notificación:
+typescriptconst notificationBadge = {
+  position: 'absolute',
+  right: -8,
+  top: -8,
+  backgroundColor: '#E74C3C',
+  borderRadius: 9,
+  minWidth: 18,
+  height: 18,
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 10,
+};
+Tab bar flotante:
+typescripttabBarStyle: {
+  position: 'absolute',
+  bottom: Platform.OS === 'ios' ? 30 : 20,
+  left: 20,
+  right: 20,
+  backgroundColor: 'rgba(40, 40, 40, 0.9)',
+  borderRadius: 30,
+  height: 70,
+  borderTopWidth: 0,
+  elevation: 8,
+  shadowColor: '#00FF7F',
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.4,
+  shadowRadius: 8,
+}
+10.5 Responsividad
+Uso de Dimensions:
+typescriptimport { Dimensions } from 'react-native';
+
+const screenWidth = Dimensions.get('window').width;
+const screenHeight = Dimensions.get('window').height;
+
+// Gráfica responsive
+<BarChart
+  width={screenWidth - 60} // 30px padding a cada lado
+  height={220}
+  // ...
+/>
+
+// Card que ocupa porcentaje del ancho
+<View style={{ 
+  width: screenWidth * 0.9,
+  maxWidth: 400, // Límite para tablets
+}}>
+Detección de orientación:
+typescriptimport { useWindowDimensions } from 'react-native';
+
+const MyComponent = () => {
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  
+  return (
+    <View style={{ 
+      flexDirection: isLandscape ? 'row' : 'column' 
+    }}>
+      {/* Contenido adaptativo */}
+    </View>
+  );
+};
+
+11. Integraciones
+11.1 Firebase Cloud Messaging
+Configuración completa ya cubierta en sección 9.2
+Payload de notificación esperado:
+json{
+  "notification": {
+    "title": "Alerta de Consumo",
+    "body": "Tu consumo superó el 80% del límite mensual"
+  },
+  "data": {
+    "type": "consumption_alert",
+    "device_id": "123",
+    "threshold": "80"
+  }
+}
+Manejo en el store:
+typescript// Guardar en historial local
+addNotification({
+  title: notification.title,
+  body: notification.body
+});
+
+// Opcional: Navegar a pantalla específica según data.type
+if (data.type === 'consumption_alert') {
+  navigation.navigate('Stats');
+}
+11.2 WebSocket (Datos en Tiempo Real)
+Conexión:
+typescriptconst ws = new WebSocket(
+  `wss://core-cloud.dev/ws/live/${deviceId}?token=${token}`
+);
+Estados del WebSocket:
+EstadoSignificadoAcción en UIconnectingEstableciendo conexiónMostrar "CONECTANDO..."connectedConexión activaBadge verde pulsante "EN VIVO"disconnectedSin conexiónBadge gris "OFFLINE"errorError de conexiónMostrar mensaje de error
+Reconexión automática:
+typescript// Reintentar hasta 3 veces con backoff exponencial
+socket.onclose = (e) => {
+  if (e.code !== 1000 && reconnectAttempts < 3) {
+    const delay = 1000 * (reconnectAttempts + 1);
+    setTimeout(() => connectWebSocket(), delay);
+    reconnectAttempts++;
+  }
+};
+Formato de mensaje recibido:
+json{
+  "watts": 1234.56,
+  "timestamp": "2025-12-11T10:30:00Z"
+}
+O alternativas compatibles:
+json{ "apower": 1234.56 }
+{ "power": 1234.56 }
+{ "value": 1234.56 }
+11.3 WiFi Manager (Escaneo y Conexión)
+Permisos necesarios (Android):
+xml<!-- AndroidManifest.xml -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+<!-- Android 13+ -->
+<uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+Escanear redes:
+typescriptimport WifiManager from 'react-native-wifi-reborn';
+
+const networks = await WifiManager.loadWifiList();
+const shellyNetworks = networks.filter(n => 
+  n.SSID.toLowerCase().startsWith('shelly')
+);
+Conectar a red:
+typescriptawait WifiManager.connectToProtectedSSID(
+  'ShellyPlus1PM-AABBCCDDEE01', // SSID
+  '',                            // Password (vacío para Shelly AP)
+  false,                         // isWEP
+  false                          // isHidden
+);
+Verificar conexión:
+typescriptconst currentSSID = await WifiManager.getCurrentWifiSSID();
+console.log('Conectado a:', currentSSID);
+
+12. Optimizaciones y Performance
+12.1 Optimización de Re-renders
+useMemo para datos procesados:
+typescriptconst processedData = useMemo(() => {
+  return data.map(item => ({
+    ...item,
+    formattedValue: formatValue(item.value)
+  }));
+}, [data]);
+useCallback para funciones pasadas a hijos:
+typescriptconst handlePress = useCallback((id: number) => {
+  console.log('Pressed:', id);
+}, []); // Sin dependencias si no usa estado externo
+
+<ChildComponent onPress={handlePress} />
+React.memo para componentes puros:
+typescriptconst DeviceRow = React.memo(({ item, onToggle }) => {
+  return (
+    <View>
+      <Text>{item.name}</Text>
+      <Switch value={item.status} onValueChange={() => onToggle(item)} />
+    </View>
+  );
+});
+12.2 Lazy Loading de Imágenes
+Uso de FastImage (recomendado para producción):
+bashnpm install react-native-fast-image
+typescriptimport FastImage from 'react-native-fast-image';
+
+<FastImage
+  style={{ width: 200, height: 200 }}
+  source={{
+    uri: 'https://example.com/image.jpg',
+    priority: FastImage.priority.normal,
+  }}
+  resizeMode={FastImage.resizeMode.cover}
+/>
+12.3 Virtualización de Listas
+FlatList con optimizaciones:
+typescript<FlatList
+  data={devices}
+  renderItem={({ item }) => <DeviceRow item={item} />}
+  keyExtractor={(item) => item.dev_id.toString()}
+  
+  // Optimizaciones
+  initialNumToRender={10}
+  maxToRenderPerBatch={10}
+  windowSize={5}
+  removeClippedSubviews={true}
+  
+  // Pull to refresh
+  onRefresh={loadData}
+  refreshing={isLoading}
+  
+  // Indicadores de carga
+  ListFooterComponent={isLoadingMore ? <ActivityIndicator /> : null}
+  onEndReached={loadMore}
+  onEndReachedThreshold={0.5}
+/>
+12.4 Caché de Datos
+Estrategia de caché con AsyncStorage:
+typescriptconst CACHE_KEY = 'dashboard_summary';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+const getCachedData = async () => {
+  try {
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
+      }
+    }
+  } catch (e) {}
+  return null;
+};
+
+const setCachedData = async (data: any) => {
+  try {
+    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (e) {}
+};
+12.5 Debounce de Búsquedas
+typescriptimport { useCallback, useEffect, useState } from 'react';
+
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+// Uso
+const SearchScreen = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
+
+  useEffect(() => {
+    if (debouncedSearch) {
+      performSearch(debouncedSearch);
+    }
+  }, [debouncedSearch]);
+
+  return (
+    <TextInput
+      value={searchTerm}
+      onChangeText={setSearchTerm}
+      placeholder="Buscar..."
+    />
+  );
+};
+
+13. Seguridad
+13.1 Almacenamiento Seguro de Tokens
+Zustand + AsyncStorage:
+typescript// ✅ BUENO: Tokens en AsyncStorage (encriptado en iOS, protegido en Android)
+persist(
+  (set, get) => ({ /* estado */ }),
+  {
+    name: 'auth-storage',
+    storage: createJSONStorage(() => AsyncStorage)
+  }
+)
+
+// ❌ MALO: Tokens en variables globales o localStorage web
+Para mayor seguridad (opcional):
+bashnpm install react-native-keychain
+typescriptimport * as Keychain from 'react-native-keychain';
+
+// Guardar
+await Keychain.setGenericPassword('token', accessToken);
+
+// Leer
+const credentials = await Keychain.getGenericPassword();
+if (credentials) {
+  console.log('Token:', credentials.password);
+}
+13.2 Validación de Inputs
+Ejemplo: Validación de email:
+typescriptconst isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const handleRegister = async () => {
+  if (!isValidEmail(email)) {
+    setError('Ingresa un correo válido');
+    return;
+  }
+  
+  if (password.length < 8) {
+    setError('La contraseña debe tener al menos 8 caracteres');
+    return;
+  }
+  
+  // Continuar con registro...
+};
+13.3 Sanitización de Datos
+Prevención de XSS en WebView:
+typescriptconst sanitizeHtml = (html: string): string => {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+="[^"
