@@ -3674,4 +3674,898 @@ const handleRegister = async () => {
 const sanitizeHtml = (html: string): string => {
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+="[^"
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/javascript:/gi, '');
+};
+```
+
+### 13.4 HTTPS y Certificados
+
+**Configuración de red segura (Android):**
+
+```xml
+<!-- android/app/src/main/res/xml/network_security_config.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+```
+
+```xml
+<!-- android/app/src/main/AndroidManifest.xml -->
+<application
+    android:networkSecurityConfig="@xml/network_security_config"
+    ...>
+```
+
+**Pinning de certificados SSL (opcional para producción):**
+
+```typescript
+// En fetch options
+const response = await fetch(API_URL, {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  },
+  // Verificación adicional de certificado
+});
+```
+
+### 13.5 Timeout de Sesión
+
+**Auto-logout por inactividad:**
+
+```typescript
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos
+
+let inactivityTimer: NodeJS.Timeout;
+
+const resetInactivityTimer = () => {
+  clearTimeout(inactivityTimer);
+  
+  inactivityTimer = setTimeout(() => {
+    Alert.alert(
+      'Sesión Expirada',
+      'Has estado inactivo por mucho tiempo. Por seguridad, cerraremos tu sesión.',
+      [{ text: 'OK', onPress: () => useAuthStore.getState().logout() }]
+    );
+  }, SESSION_TIMEOUT);
+};
+
+// En App.tsx
+useEffect(() => {
+  const subscription = AppState.addEventListener('change', (nextAppState) => {
+    if (nextAppState === 'active') {
+      resetInactivityTimer();
+    }
+  });
+
+  resetInactivityTimer();
+
+  return () => {
+    clearTimeout(inactivityTimer);
+    subscription.remove();
+  };
+}, []);
+```
+
+### 13.6 Protección contra Inyecciones
+
+**Validación en registro de dispositivos:**
+
+```typescript
+const validateMacAddress = (mac: string): boolean => {
+  // Formato: AABBCCDDEE01 (12 caracteres hexadecimales)
+  const macRegex = /^[A-F0-9]{12}$/i;
+  return macRegex.test(mac);
+};
+
+const registerShellyDevice = async (name: string, mac: string) => {
+  // Sanitizar entrada
+  const cleanName = name.trim().substring(0, 50);
+  const cleanMac = mac.toUpperCase().replace(/[^A-F0-9]/g, '');
+  
+  if (!validateMacAddress(cleanMac)) {
+    throw new Error('MAC address inválida');
+  }
+  
+  // Continuar con registro...
+};
+```
+
+---
+
+## 14. Testing y Debugging
+
+### 14.1 Debugging con React Native Debugger
+
+**Instalación:**
+
+```bash
+# macOS
+brew install --cask react-native-debugger
+
+# Windows/Linux: Descargar desde GitHub
+```
+
+**Uso:**
+1. Abrir React Native Debugger
+2. En la app: Shake device → "Debug"
+3. Inspeccionar Redux, Network, Console
+
+**Console.log personalizado:**
+
+```typescript
+const logDev = (message: string, data?: any) => {
+  if (__DEV__) {
+    console.log(`[EcoWatt] ${message}`, data || '');
+  }
+};
+
+logDev('Usuario autenticado', { userId: 123 });
+```
+
+### 14.2 Debugging de Red
+
+**Interceptar llamadas Fetch:**
+
+```typescript
+const originalFetch = global.fetch;
+
+global.fetch = async (url, options) => {
+  console.log('📡 Request:', url, options?.method || 'GET');
+  
+  const startTime = Date.now();
+  const response = await originalFetch(url, options);
+  const duration = Date.now() - startTime;
+  
+  console.log(`✅ Response: ${response.status} (${duration}ms)`);
+  
+  return response;
+};
+```
+
+**Usar Reactotron (herramienta avanzada):**
+
+```bash
+npm install --save-dev reactotron-react-native
+```
+
+```typescript
+// ReactotronConfig.ts
+import Reactotron from 'reactotron-react-native';
+
+Reactotron
+  .configure({ name: 'EcoWatt' })
+  .useReactNative()
+  .connect();
+
+// En cualquier componente
+Reactotron.log('Datos cargados', data);
+```
+
+### 14.3 Testing con Jest
+
+**Configuración básica:**
+
+```json
+// package.json
+{
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch"
+  }
+}
+```
+
+**Ejemplo de test (authService):**
+
+```typescript
+// __tests__/services/authService.test.ts
+import { loginUser } from '../../src/services/authService';
+
+global.fetch = jest.fn();
+
+describe('authService', () => {
+  beforeEach(() => {
+    (fetch as jest.Mock).mockClear();
+  });
+
+  it('should login successfully', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: 'test_token',
+        refresh_token: 'test_refresh'
+      })
+    });
+
+    const result = await loginUser({
+      user_email: 'test@example.com',
+      user_password: 'password123'
+    });
+
+    expect(result.access_token).toBe('test_token');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/login'),
+      expect.objectContaining({ method: 'POST' })
+    );
+  });
+
+  it('should handle login error', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: 'Invalid credentials' })
+    });
+
+    await expect(
+      loginUser({
+        user_email: 'test@example.com',
+        user_password: 'wrong'
+      })
+    ).rejects.toThrow('Invalid credentials');
+  });
+});
+```
+
+**Test de componente:**
+
+```typescript
+// __tests__/components/CustomInput.test.tsx
+import React from 'react';
+import { render, fireEvent } from '@testing-library/react-native';
+import CustomInput from '../../src/components/CustomInput';
+
+describe('CustomInput', () => {
+  it('renders correctly', () => {
+    const { getByPlaceholderText } = render(
+      <CustomInput placeholder="Email" />
+    );
+    
+    expect(getByPlaceholderText('Email')).toBeTruthy();
+  });
+
+  it('calls onChangeText when text changes', () => {
+    const handleChange = jest.fn();
+    const { getByPlaceholderText } = render(
+      <CustomInput 
+        placeholder="Email" 
+        onChangeText={handleChange} 
+      />
+    );
+    
+    fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+    
+    expect(handleChange).toHaveBeenCalledWith('test@example.com');
+  });
+});
+```
+
+### 14.4 Logging de Errores
+
+**Captura global de errores:**
+
+```typescript
+// App.tsx
+import { ErrorBoundary } from 'react-error-boundary';
+
+const ErrorFallback = ({ error, resetErrorBoundary }) => {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Algo salió mal:</Text>
+      <Text>{error.message}</Text>
+      <Button title="Reintentar" onPress={resetErrorBoundary} />
+    </View>
+  );
+};
+
+const App = () => {
+  return (
+    <ErrorBoundary 
+      FallbackComponent={ErrorFallback}
+      onError={(error, errorInfo) => {
+        console.error('Error capturado:', error, errorInfo);
+        // Enviar a servicio de logging (Sentry, etc.)
+      }}
+    >
+      <NavigationContainer>
+        {/* App content */}
+      </NavigationContainer>
+    </ErrorBoundary>
+  );
+};
+```
+
+**Integración con Sentry (opcional):**
+
+```bash
+npm install @sentry/react-native
+```
+
+```typescript
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'YOUR_SENTRY_DSN',
+  enableAutoSessionTracking: true,
+  tracesSampleRate: 1.0,
+});
+
+// Capturar error manualmente
+try {
+  riskyOperation();
+} catch (error) {
+  Sentry.captureException(error);
+}
+```
+
+### 14.5 Performance Monitoring
+
+**Medir tiempo de carga:**
+
+```typescript
+const startTime = performance.now();
+
+await loadData();
+
+const endTime = performance.now();
+console.log(`Carga completada en ${(endTime - startTime).toFixed(2)}ms`);
+```
+
+**Monitorear re-renders:**
+
+```typescript
+import { useEffect, useRef } from 'react';
+
+const useWhyDidYouUpdate = (name: string, props: any) => {
+  const previousProps = useRef<any>();
+
+  useEffect(() => {
+    if (previousProps.current) {
+      const allKeys = Object.keys({ ...previousProps.current, ...props });
+      const changedProps: any = {};
+
+      allKeys.forEach(key => {
+        if (previousProps.current[key] !== props[key]) {
+          changedProps[key] = {
+            from: previousProps.current[key],
+            to: props[key],
+          };
+        }
+      });
+
+      if (Object.keys(changedProps).length) {
+        console.log('[why-did-you-update]', name, changedProps);
+      }
+    }
+
+    previousProps.current = props;
+  });
+};
+
+// Uso
+const MyComponent = (props) => {
+  useWhyDidYouUpdate('MyComponent', props);
+  // ...
+};
+```
+
+---
+
+## 15. Despliegue y Distribución
+
+### 15.1 Build de Producción (Android)
+
+**Generar APK de release:**
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+**Ubicación del APK:**
+```
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+**Generar AAB (Google Play):**
+
+```bash
+cd android
+./gradlew bundleRelease
+```
+
+**Ubicación del AAB:**
+```
+android/app/build/outputs/bundle/release/app-release.aab
+```
+
+**Firmar manualmente (si es necesario):**
+
+```bash
+jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+  -keystore my-release-key.keystore \
+  app-release-unsigned.apk alias_name
+```
+
+### 15.2 Build de Producción (iOS)
+
+**Abrir Xcode:**
+
+```bash
+cd ios
+open EcowattNuevo.xcworkspace
+```
+
+**Pasos en Xcode:**
+1. Product → Scheme → Edit Scheme
+2. Run → Build Configuration → **Release**
+3. Product → Archive
+4. Window → Organizer → Distribute App
+5. Seleccionar método de distribución (App Store, Ad Hoc, etc.)
+
+**Build desde línea de comandos:**
+
+```bash
+cd ios
+xcodebuild -workspace EcowattNuevo.xcworkspace \
+  -scheme EcowattNuevo \
+  -configuration Release \
+  -archivePath build/EcowattNuevo.xcarchive \
+  archive
+```
+
+### 15.3 Versionado
+
+**Actualizar versión (Android):**
+
+```gradle
+// android/app/build.gradle
+android {
+    defaultConfig {
+        versionCode 2        // Incrementar para cada release
+        versionName "1.0.1"  // Versión visible para usuarios
+    }
+}
+```
+
+**Actualizar versión (iOS):**
+
+```
+Xcode → Target EcowattNuevo → General
+- Version: 1.0.1
+- Build: 2
+```
+
+**O desde Info.plist:**
+
+```xml
+<key>CFBundleShortVersionString</key>
+<string>1.0.1</string>
+<key>CFBundleVersion</key>
+<string>2</string>
+```
+
+### 15.4 Variables de Entorno por Build
+
+**Usar react-native-config:**
+
+```bash
+npm install react-native-config
+```
+
+**Crear archivos .env:**
+
+```
+# .env.production
+API_BASE_URL=https://api.ecowatt.com
+ENVIRONMENT=production
+
+# .env.staging
+API_BASE_URL=https://staging-api.ecowatt.com
+ENVIRONMENT=staging
+```
+
+**Uso en código:**
+
+```typescript
+import Config from 'react-native-config';
+
+const API_BASE_URL = Config.API_BASE_URL;
+console.log('Environment:', Config.ENVIRONMENT);
+```
+
+**Build con entorno específico:**
+
+```bash
+# Android
+ENVFILE=.env.production npm run android
+
+# iOS
+ENVFILE=.env.production npm run ios
+```
+
+### 15.5 Code Push (Actualizaciones OTA)
+
+**Instalación:**
+
+```bash
+npm install react-native-code-push
+```
+
+**Configuración en AppCenter:**
+
+1. Crear cuenta en https://appcenter.ms
+2. Crear apps para iOS y Android
+3. Obtener deployment keys
+
+**Configuración en código:**
+
+```typescript
+// App.tsx
+import codePush from 'react-native-code-push';
+
+const App = () => {
+  // ...
+};
+
+const codePushOptions = {
+  checkFrequency: codePush.CheckFrequency.ON_APP_RESUME,
+  installMode: codePush.InstallMode.ON_NEXT_RESUME,
+};
+
+export default codePush(codePushOptions)(App);
+```
+
+**Liberar actualización:**
+
+```bash
+appcenter codepush release-react -a username/EcoWatt-Android \
+  -d Production
+```
+
+---
+
+## 16. Troubleshooting Común
+
+### 16.1 Problemas de Build
+
+**Error: "Unable to resolve module"**
+
+```bash
+# Limpiar caché
+npm start -- --reset-cache
+
+# Reinstalar dependencias
+rm -rf node_modules
+npm install
+
+# iOS: Reinstalar pods
+cd ios
+rm -rf Pods Podfile.lock
+pod install
+cd ..
+```
+
+**Error: "Task :app:installDebug FAILED"**
+
+```bash
+# Android: Limpiar build
+cd android
+./gradlew clean
+cd ..
+
+# Verificar que solo un emulador esté corriendo
+adb devices
+```
+
+**Error: "Command PhaseScriptExecution failed"**
+
+```bash
+# iOS: Limpiar derived data
+rm -rf ~/Library/Developer/Xcode/DerivedData
+
+# En Xcode: Product → Clean Build Folder
+```
+
+### 16.2 Problemas de Firebase
+
+**Error: "Default FirebaseApp is not initialized"**
+
+```typescript
+// Verificar que firebase se inicialice ANTES de usarse
+// En App.tsx, al inicio:
+
+import firebase from '@react-native-firebase/app';
+
+if (!firebase.apps.length) {
+  firebase.initializeApp();
+}
+```
+
+**Error: "google-services.json not found"**
+
+```bash
+# Verificar ubicación correcta
+ls android/app/google-services.json
+
+# Debe estar en:
+# android/app/google-services.json (NO en android/)
+```
+
+### 16.3 Problemas de Permisos
+
+**Error: "Location permission denied"**
+
+```typescript
+// Verificar que se soliciten ANTES de escanear WiFi
+const granted = await requestWiFiPermissions();
+if (!granted) {
+  Alert.alert('Permisos Requeridos', 'Habilita permisos de ubicación en Configuración');
+  return;
+}
+```
+
+**Android 13+: "Nearby WiFi devices permission"**
+
+```typescript
+if (Platform.Version >= 33) {
+  const permissions = [
+    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    'android.permission.NEARBY_WIFI_DEVICES' as any
+  ];
+  await PermissionsAndroid.requestMultiple(permissions);
+}
+```
+
+### 16.4 Problemas de WebSocket
+
+**Error: "WebSocket connection failed"**
+
+```typescript
+// Verificar URL correcta
+const wsUrl = `wss://core-cloud.dev/ws/live/${deviceId}?token=${token}`;
+
+// Agregar logs detallados
+ws.onerror = (error) => {
+  console.error('WebSocket error:', error);
+  console.log('URL intentada:', wsUrl);
+};
+
+ws.onclose = (e) => {
+  console.log('WebSocket cerrado. Código:', e.code);
+  console.log('Razón:', e.reason);
+};
+```
+
+**WebSocket se desconecta constantemente:**
+
+```typescript
+// Implementar heartbeat (ping/pong)
+let pingInterval: NodeJS.Timeout;
+
+ws.onopen = () => {
+  pingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'ping' }));
+    }
+  }, 30000); // Cada 30 segundos
+};
+
+ws.onclose = () => {
+  clearInterval(pingInterval);
+};
+```
+
+### 16.5 Problemas con Shelly
+
+**Error: "Cannot connect to 192.168.33.1"**
+
+```typescript
+// Verificar que el móvil esté conectado a la red del Shelly
+const currentSSID = await WifiManager.getCurrentWifiSSID();
+console.log('Conectado a:', currentSSID);
+
+// Debe mostrar algo como: "ShellyPlus1PM-AABBCCDDEE01"
+
+// Agregar timeout a las peticiones
+const fetchWithTimeout = async (url: string, options: RequestInit, ms: number) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ms);
+  
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeout);
+    return response;
+  } catch (error) {
+    clearTimeout(timeout);
+    throw error;
+  }
+};
+```
+
+**Script no se instala correctamente:**
+
+```typescript
+// SIEMPRE usar PutCode, NO Create con code inline
+// 1. Crear vacío
+const res = await fetch('http://192.168.33.1/rpc/Script.Create', {
+  method: 'POST',
+  body: JSON.stringify({ name: 'ecowatt_ingest' })
+});
+
+const { id } = await res.json();
+
+// 2. Inyectar código
+await fetch('http://192.168.33.1/rpc/Script.PutCode', {
+  method: 'POST',
+  body: JSON.stringify({ id, code: scriptContent })
+});
+```
+
+---
+
+## 17. Recursos Adicionales
+
+### 17.1 Documentación Oficial
+
+- **React Native**: https://reactnative.dev/docs/getting-started
+- **React Navigation**: https://reactnavigation.org/docs/getting-started
+- **Zustand**: https://docs.pmnd.rs/zustand/getting-started/introduction
+- **Firebase (React Native)**: https://rnfirebase.io/
+- **Shelly API**: https://shelly-api-docs.shelly.cloud/gen2/
+
+### 17.2 Herramientas Recomendadas
+
+| Herramienta | Propósito | URL |
+|-------------|-----------|-----|
+| React Native Debugger | Debugging avanzado | https://github.com/jhen0409/react-native-debugger |
+| Reactotron | Inspección de estado | https://github.com/infinitered/reactotron |
+| Flipper | Debugging nativo | https://fbflipper.com/ |
+| Postman | Testing de API | https://www.postman.com/ |
+| Android Studio | Desarrollo Android | https://developer.android.com/studio |
+| Xcode | Desarrollo iOS | https://developer.apple.com/xcode/ |
+
+### 17.3 Comunidades y Soporte
+
+- **Discord de React Native**: https://discord.gg/reactnative
+- **Stack Overflow**: Tag `react-native`
+- **GitHub Issues**: Repositorios de las librerías usadas
+
+### 17.4 Mejores Prácticas
+
+**Estructura de carpetas recomendada para escalar:**
+
+```
+src/
+├── @types/          # TypeScript definitions
+├── api/             # API clients y endpoints
+├── assets/          # Imágenes, fuentes, etc.
+├── components/      # Componentes reutilizables
+│   ├── common/      # Botones, inputs, etc.
+│   └── domain/      # Componentes específicos (DeviceCard, etc.)
+├── config/          # Configuraciones
+├── constants/       # Constantes de la app
+├── hooks/           # Custom hooks
+├── navigation/      # Navegación
+├── screens/         # Pantallas
+├── services/        # Lógica de negocio
+├── store/           # Estado global
+├── styles/          # Estilos
+├── utils/           # Utilidades
+└── App.tsx
+```
+
+**Naming conventions avanzadas:**
+
+```typescript
+// Hooks personalizados
+useDeviceList.ts
+useAuth.ts
+
+// Servicios
+authService.ts
+deviceService.ts
+
+// Tipos compartidos
+types/User.ts
+types/Device.ts
+
+// Constantes
+constants/colors.ts
+constants/routes.ts
+```
+
+---
+
+## 18. Changelog y Versionado
+
+### Versión 1.0.0 (Actual)
+
+**Características:**
+- ✅ Autenticación completa (login, registro, recuperación)
+- ✅ Dashboard con resumen de consumo
+- ✅ Gráficas históricas (diario, semanal, mensual)
+- ✅ Control remoto de dispositivos Shelly
+- ✅ Datos en tiempo real vía WebSocket
+- ✅ Notificaciones push con FCM
+- ✅ Generación de reportes PDF
+- ✅ Configuración automática de dispositivos Shelly
+
+**Próximas funcionalidades (Roadmap):**
+- 🔲 Soporte para múltiples tarifas CFE
+- 🔲 Programación de horarios de encendido/apagado
+- 🔲 Comparativa de consumo con usuarios similares
+- 🔲 Integración con Google Assistant / Alexa
+- 🔲 Widget de home screen
+- 🔲 Modo oscuro
+- 🔲 Soporte para más dispositivos (Shelly 2PM, etc.)
+
+---
+
+## 19. Contacto y Contribución
+
+### 19.1 Reporte de Bugs
+
+Si encuentras un error:
+1. Verificar que no esté ya reportado en Issues
+2. Incluir logs completos
+3. Especificar versión de la app y SO
+4. Pasos para reproducir el error
+
+### 19.2 Solicitudes de Funcionalidades
+
+Para solicitar nuevas características:
+1. Describir el caso de uso
+2. Explicar el beneficio esperado
+3. Proporcionar mockups si es posible
+
+### 19.3 Contribuir al Código
+
+```bash
+# 1. Fork del repositorio
+# 2. Crear branch
+git checkout -b feature/nueva-funcionalidad
+
+# 3. Commit de cambios
+git commit -m "feat: agregar funcionalidad X"
+
+# 4. Push y crear Pull Request
+git push origin feature/nueva-funcionalidad
+```
+
+**Convención de commits:**
+- `feat:` Nueva funcionalidad
+- `fix:` Corrección de bug
+- `docs:` Cambios en documentación
+- `style:` Cambios de formato (no afectan lógica)
+- `refactor:` Refactorización de código
+- `test:` Agregar o modificar tests
+- `chore:` Tareas de mantenimiento
+
+---
+
+## 20. Licencia
+
+Este proyecto es propiedad de [TU EMPRESA/NOMBRE].
+
+**Uso del código:**
+- ✅ Uso interno
+- ✅ Modificaciones permitidas
+- ❌ Redistribución sin autorización
+- ❌ Uso comercial sin licencia
+
+---
+
+## 🎉 Fin de la Documentación
+
+Esta documentación cubre todos los aspectos técnicos del frontend de **EcoWatt**. Para consultas específicas sobre el backend o la infraestructura, contacta al equipo de backend.
+
+**Última actualización:** Diciembre 2025  
+**Versión de la documentación:** 1.0  
+**Mantenido por:** [Tu Nombre/Equipo]
